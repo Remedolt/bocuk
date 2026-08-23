@@ -10,14 +10,16 @@ function tag(mesh, zombie, part) {
 
 function buildPlaceholder(zombie, type) {
   const group = new THREE.Group();
-  const skin = new THREE.MeshLambertMaterial({
+  const skin = new THREE.MeshStandardMaterial({
     color: type.color,
+    roughness: 0.84,
+    metalness: 0.04,
     emissive: type.color,
-    emissiveIntensity: 0.08,
+    emissiveIntensity: 0.05,
   });
-  const cloth = new THREE.MeshLambertMaterial({ color: 0x3a4638 });
-  const dark = new THREE.MeshLambertMaterial({ color: 0x2a2c28 });
-  const stain = new THREE.MeshLambertMaterial({ color: 0x5a2418 });
+  const cloth = new THREE.MeshStandardMaterial({ color: 0x3a4638, roughness: 0.9, metalness: 0.02 });
+  const dark = new THREE.MeshStandardMaterial({ color: 0x2a2c28, roughness: 0.88 });
+  const stain = new THREE.MeshStandardMaterial({ color: 0x5a2418, roughness: 0.8 });
 
   const torso = new THREE.Mesh(new THREE.BoxGeometry(0.48, 0.64, 0.26), cloth);
   torso.position.y = 1.05;
@@ -30,18 +32,19 @@ function buildPlaceholder(zombie, type) {
   pelvis.position.y = 0.68;
   tag(pelvis, zombie, 'body');
 
-  const head = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.32, 0.28), skin);
-  head.position.y = 1.54;
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.17, 10, 8), skin);
+  head.scale.set(1.05, 1.12, 0.95);
+  head.position.y = 1.55;
   tag(head, zombie, 'head');
 
   const hair = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.1, 0.3), dark);
   hair.position.set(0, 1.72, -0.02);
 
   const eyeMat = new THREE.MeshBasicMaterial({ color: type.eye, fog: false });
-  const eyeL = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 8), eyeMat);
+  const eyeL = new THREE.Mesh(new THREE.SphereGeometry(0.045, 8, 8), eyeMat);
   const eyeR = eyeL.clone();
-  eyeL.position.set(-0.07, 1.56, 0.14);
-  eyeR.position.set(0.07, 1.56, 0.14);
+  eyeL.position.set(-0.06, 1.58, 0.14);
+  eyeR.position.set(0.06, 1.58, 0.14);
 
   const jaw = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.07, 0.12), dark);
   jaw.position.set(0, 1.38, 0.1);
