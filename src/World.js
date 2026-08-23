@@ -214,6 +214,71 @@ function cloneMap(tex, rx, ry) {
   return map;
 }
 
+const BUILDING_NAMES = [
+  { title: 'GÜL', kind: 'APARTMANI' },
+  { title: 'YILDIZ', kind: 'APARTMANI' },
+  { title: 'ÇAMLIK', kind: 'SİTESİ' },
+  { title: 'BARIŞ', kind: 'APT.' },
+  { title: 'DENİZ', kind: 'SİTESİ' },
+  { title: 'MEŞE', kind: 'APARTMANI' },
+  { title: 'PINAR', kind: 'APT.' },
+  { title: 'UMUT', kind: 'SİTESİ' },
+  { title: 'ŞAFAK', kind: 'APARTMANI' },
+  { title: 'NİLÜFER', kind: 'APT.' },
+  { title: 'BAHAR', kind: 'SİTESİ' },
+  { title: 'KARANFİL', kind: 'APARTMANI' },
+  { title: 'ZAFER', kind: 'APT.' },
+  { title: 'ANADOLU', kind: 'SİTESİ' },
+  { title: 'KARDELEN', kind: 'APARTMANI' },
+  { title: 'LALE', kind: 'APT.' },
+];
+
+function plateTexture(title, kind, style = 'wood') {
+  const canvas = document.createElement('canvas');
+  canvas.width = 768;
+  canvas.height = 256;
+  const ctx = canvas.getContext('2d');
+  if (style === 'street') {
+    ctx.fillStyle = '#123a86';
+    ctx.fillRect(0, 0, 768, 256);
+    ctx.fillStyle = '#1c56b8';
+    ctx.fillRect(22, 22, 724, 212);
+    ctx.strokeStyle = '#f4f7fb';
+    ctx.lineWidth = 12;
+    ctx.strokeRect(14, 14, 740, 228);
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 72px "Segoe UI", Tahoma, Arial, sans-serif';
+    ctx.fillText(title, 384, 108, 680);
+    ctx.font = 'bold 42px "Segoe UI", Tahoma, Arial, sans-serif';
+    ctx.fillText(kind, 384, 178, 680);
+  } else {
+    ctx.fillStyle = '#2c1812';
+    ctx.fillRect(0, 0, 768, 256);
+    ctx.fillStyle = '#3d241c';
+    ctx.fillRect(18, 18, 732, 220);
+    ctx.strokeStyle = '#d7b56a';
+    ctx.lineWidth = 10;
+    ctx.strokeRect(14, 14, 740, 228);
+    ctx.strokeStyle = '#8a6230';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(28, 28, 712, 200);
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#f4e6c8';
+    ctx.font = 'bold 78px "Segoe UI", Tahoma, Arial, sans-serif';
+    ctx.fillText(title, 384, 108, 680);
+    ctx.fillStyle = '#e2c07a';
+    ctx.font = 'bold 40px "Segoe UI", Tahoma, Arial, sans-serif';
+    ctx.fillText(kind, 384, 178, 680);
+  }
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = 8;
+  return tex;
+}
+
 export class World {
   constructor(scene) {
     this.scene = scene;
@@ -225,6 +290,7 @@ export class World {
     this.fires = [];
     this.explosions = [];
     this.barrels = [];
+    this._nameIndex = 0;
     this.halfSize = WORLD.halfSize;
 
     this.asphalt = asphaltTexture();
@@ -601,6 +667,34 @@ export class World {
     tank.position.set(x - w * 0.22, h + 0.7, z + d * 0.18);
     tank.castShadow = true;
     this.scene.add(tank);
+
+    this._addBuildingSign(x, z, w, towardRoad);
+  }
+
+  _addBuildingSign(x, z, w, towardRoad) {
+    const name = BUILDING_NAMES[this._nameIndex % BUILDING_NAMES.length];
+    this._nameIndex += 1;
+    const tex = plateTexture(name.title, name.kind);
+    const face = new THREE.Mesh(
+      new THREE.PlaneGeometry(2.45, 0.82),
+      new THREE.MeshStandardMaterial({
+        map: tex,
+        roughness: 0.42,
+        metalness: 0.12,
+        emissiveMap: tex,
+        emissive: new THREE.Color(0x333333),
+        emissiveIntensity: 0.22,
+      }),
+    );
+    const back = new THREE.Mesh(
+      new THREE.BoxGeometry(0.07, 0.9, 2.58),
+      new THREE.MeshStandardMaterial({ color: 0x3a2218, roughness: 0.55, metalness: 0.18 }),
+    );
+    const px = x + towardRoad * (w / 2 + 0.12);
+    face.position.set(px, 3.62, z);
+    back.position.set(x + towardRoad * (w / 2 + 0.08), 3.62, z);
+    face.rotation.y = towardRoad * (Math.PI / 2);
+    this.scene.add(back, face);
   }
 
   _buildCity() {
@@ -634,6 +728,30 @@ export class World {
     });
     this.addBox(0, 1.1, -this.halfSize - 1, 40, 2.2, 1.2, wallMat, true);
     this.addBox(0, 1.1, this.halfSize + 1, 40, 2.2, 1.2, wallMat, true);
+
+    this._addStreetSign(7.12, -15.9, -Math.PI / 2, 'ATATÜRK', 'CADDESİ');
+    this._addStreetSign(-7.12, 3.4, Math.PI / 2, 'ATATÜRK', 'CADDESİ');
+  }
+
+  _addStreetSign(x, z, rotY, title, kind) {
+    const pole = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.05, 0.06, 3.4, 8),
+      new THREE.MeshStandardMaterial({ color: 0x2a2e34, metalness: 0.7, roughness: 0.35 }),
+    );
+    pole.position.set(x, 1.7, z);
+    pole.castShadow = true;
+    const blade = new THREE.Mesh(
+      new THREE.PlaneGeometry(2.2, 0.55),
+      new THREE.MeshStandardMaterial({
+        map: plateTexture(title, kind, 'street'),
+        roughness: 0.38,
+        metalness: 0.12,
+        side: THREE.DoubleSide,
+      }),
+    );
+    blade.position.set(x, 3.28, z);
+    blade.rotation.y = rotY;
+    this.scene.add(pole, blade);
   }
 
   _makeCar(x, z, rotY, wrecked) {
