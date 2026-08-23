@@ -238,12 +238,20 @@ export class Sound {
     const ctx = this.ctx;
     const bus = ctx.createGain();
     bus.gain.value = 0.0001;
-    bus.connect(this.master);
-    bus.gain.exponentialRampToValueAtTime(0.2, ctx.currentTime + 1.6);
+    const comp = ctx.createDynamicsCompressor();
+    comp.threshold.value = -18;
+    comp.knee.value = 8;
+    comp.ratio.value = 4.5;
+    comp.attack.value = 0.008;
+    comp.release.value = 0.2;
+    bus.connect(comp);
+    comp.connect(this.master);
+    bus.gain.exponentialRampToValueAtTime(0.34, ctx.currentTime + 1.15);
     this._musicBus = bus;
+    this._musicComp = comp;
     this._musicNodes = [];
 
-    const drone = (freq, type, gain, cutoff, detune = 0) => {
+    const drone = (freq, type, gain, cutoff, detune = 0, lfoHz = 0, lfoDepth = 0) => {
       const osc = ctx.createOscillator();
       osc.type = type;
       osc.frequency.value = freq;
@@ -251,6 +259,7 @@ export class Sound {
       const filter = ctx.createBiquadFilter();
       filter.type = 'lowpass';
       filter.frequency.value = cutoff;
+      filter.Q.value = 0.9;
       const g = ctx.createGain();
       g.gain.value = gain;
       osc.connect(filter);
@@ -258,12 +267,24 @@ export class Sound {
       g.connect(bus);
       osc.start();
       this._musicNodes.push(osc);
+      if (lfoHz > 0) {
+        const lfo = ctx.createOscillator();
+        lfo.type = 'sine';
+        lfo.frequency.value = lfoHz;
+        const lg = ctx.createGain();
+        lg.gain.value = lfoDepth;
+        lfo.connect(lg);
+        lg.connect(filter.frequency);
+        lfo.start();
+        this._musicNodes.push(lfo);
+      }
     };
 
-    drone(55, 'sine', 0.24, 160);
-    drone(82.41, 'sine', 0.1, 200, 5);
-    drone(220, 'triangle', 0.04, 900, -7);
-    drone(329.63, 'sine', 0.028, 1100, 4);
+    drone(36.71, 'sine', 0.4, 90);
+    drone(55, 'sawtooth', 0.14, 150, -9, 0.07, 45);
+    drone(73.42, 'square', 0.045, 210, 5, 0.09, 55);
+    drone(110, 'sawtooth', 0.08, 480, -14, 0.11, 220);
+    drone(146.83, 'triangle', 0.04, 760, 6, 0.05, 160);
 
     if (this._noise) {
       const wind = ctx.createBufferSource();
@@ -271,21 +292,36 @@ export class Sound {
       wind.loop = true;
       const wf = ctx.createBiquadFilter();
       wf.type = 'lowpass';
-      wf.frequency.value = 380;
+      wf.frequency.value = 190;
       const wg = ctx.createGain();
-      wg.gain.value = 0.035;
+      wg.gain.value = 0.07;
       wind.connect(wf);
       wf.connect(wg);
       wg.connect(bus);
       wind.start();
       this._musicNodes.push(wind);
+
+      const grit = ctx.createBufferSource();
+      grit.buffer = this._noise;
+      grit.loop = true;
+      const gf = ctx.createBiquadFilter();
+      gf.type = 'bandpass';
+      gf.frequency.value = 1800;
+      gf.Q.value = 0.7;
+      const gg = ctx.createGain();
+      gg.gain.value = 0.018;
+      grit.connect(gf);
+      gf.connect(gg);
+      gg.connect(bus);
+      grit.start();
+      this._musicNodes.push(grit);
     }
 
     this._musicStep = 0;
-    this._scheduleMusic(ctx.currentTime + 0.5);
+    this._scheduleMusic(ctx.currentTime + 0.35);
   }
 
-  _tone(freq, when, dur, peak, type, cutoff) {
+  _tone(freq, when, dur, peak, type, cutoff, attack = 0.05) {
     if (!this.ctx || !this._musicBus) return;
     const osc = this.ctx.createOscillator();
     osc.type = type;
@@ -295,7 +331,7 @@ export class Sound {
     filter.frequency.value = cutoff;
     const g = this.ctx.createGain();
     g.gain.setValueAtTime(0.0001, when);
-    g.gain.exponentialRampToValueAtTime(Math.max(peak, 0.0001), when + 0.05);
+    g.gain.exponentialRampToValueAtTime(Math.max(peak, 0.0001), when + attack);
     g.gain.exponentialRampToValueAtTime(0.0001, when + dur);
     osc.connect(filter);
     filter.connect(g);
@@ -304,16 +340,66 @@ export class Sound {
     osc.stop(when + dur + 0.02);
   }
 
+  _kick(when) {
+    if (!this.ctx || !this._musicBus) return;
+    const osc = this.ctx.createOscillator();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(82, when);
+    osc.frequency.exponentialRampToValueAtTime(28, when + 0.16);
+    const g = this.ctx.createGain();
+    g.gain.setValueAtTime(0.0001, when);
+    g.gain.exponentialRampToValueAtTime(0.5, when + 0.006);
+    g.gain.exponentialRampToValueAtTime(0.0001, when + 0.2);
+    osc.connect(g);
+    g.connect(this._musicBus);
+    osc.start(when);
+    osc.stop(when + 0.22);
+  }
+
+  _musicNoise(when, dur, peak, freq, q) {
+    if (!this.ctx || !this._musicBus || !this._noise) return;
+    const src = this.ctx.createBufferSource();
+    src.buffer = this._noise;
+    const filter = this.ctx.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.frequency.value = freq;
+    filter.Q.value = q;
+    const g = this.ctx.createGain();
+    g.gain.setValueAtTime(0.0001, when);
+    g.gain.exponentialRampToValueAtTime(Math.max(peak, 0.0001), when + 0.008);
+    g.gain.exponentialRampToValueAtTime(0.0001, when + dur);
+    src.connect(filter);
+    filter.connect(g);
+    g.connect(this._musicBus);
+    src.start(when);
+    src.stop(when + dur + 0.03);
+  }
+
   _scheduleMusic(when) {
     if (!this._musicOn || !this.ctx) return;
-    const melody = [220, 261.63, 329.63, 392, 329.63, 261.63, 246.94, 196];
-    const bass = [55, 55, 43.65, 65.41];
-    const step = this._musicStep % 8;
-    this._tone(melody[step], when, 1.4, 0.042, 'triangle', 1400);
-    this._tone(bass[step % 4], when, 1.65, 0.08, 'sine', 170);
-    if (step % 4 === 0) this._tone(110, when, 0.16, 0.05, 'sine', 140);
+    const melody = [146.83, 155.56, 130.81, 110, 146.83, 174.61, 123.47, 98];
+    const bass = [36.71, 36.71, 32.7, 41.2];
+    const step = this._musicStep % 16;
+    const note = melody[step % 8];
+    const root = bass[step % 4];
+
+    this._kick(when);
+    if (step % 8 === 0) this._kick(when + 0.17);
+    this._tone(root, when, 0.92, 0.22, 'sine', 130, 0.018);
+    this._tone(root * 2, when, 0.62, 0.07, 'sawtooth', 260, 0.03);
+    if (step % 2 === 0) {
+      this._tone(note, when, 1.05, 0.13, 'triangle', 1600, 0.05);
+      this._tone(note * 1.498, when, 0.85, 0.04, 'sawtooth', 1100, 0.07);
+    }
+    if (step % 4 === 0) this._musicNoise(when, 0.14, 0.1, 170, 0.75);
+    if (step % 8 === 4) this._musicNoise(when, 0.2, 0.08, 2200, 1.4);
+    if (step % 16 === 0) {
+      this._tone(220, when, 0.42, 0.09, 'sawtooth', 850, 0.012);
+      this._tone(233.08, when, 0.48, 0.07, 'sawtooth', 850, 0.012);
+    }
+
     this._musicStep += 1;
-    const next = when + 1.75;
+    const next = when + 0.78;
     const delay = Math.max(60, (next - this.ctx.currentTime) * 1000);
     this._musicTimer = window.setTimeout(() => this._scheduleMusic(next), delay);
   }
