@@ -665,6 +665,19 @@ button:hover {
   color: #ffd6d6;
 }
 
+a.btn-ghost {
+  pointer-events: auto;
+  display: block;
+  text-align: center;
+  text-decoration: none;
+  box-sizing: border-box;
+  cursor: pointer;
+  font-family: var(--font-ui);
+  letter-spacing: 0.22em;
+  font-size: 13px;
+  padding: 14px 22px;
+}
+
 .btn-ghost:hover {
   background: rgba(255, 42, 42, 0.16);
 }
