@@ -3,74 +3,68 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Zombi Bükücü</title>
-    <meta name="description" content="Tarayıcıda çalışan 3D FPS zombi hayatta kalma oyunu." />
-    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect fill='%231a2a18' width='64' height='64'/%3E%3Ccircle cx='32' cy='32' r='10' fill='none' stroke='%23c44a2a' stroke-width='4'/%3E%3Ccircle cx='32' cy='32' r='2' fill='%23c44a2a'/%3E%3C/svg%3E" />
+    <title>BÖÖCÜK</title>
+    <meta name="description" content="BÖÖCÜK — üstten görünüm otomatik av. Silahların yörüngede döner, böcekler gelir." />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect fill='%23140c08' width='64' height='64' rx='12'/%3E%3Cellipse cx='32' cy='34' rx='18' ry='14' fill='%23c8ff3d'/%3E%3Ccircle cx='24' cy='30' r='5' fill='%23140c08'/%3E%3Ccircle cx='40' cy='30' r='5' fill='%23140c08'/%3E%3Ccircle cx='25' cy='29' r='1.6' fill='%23fff'/%3E%3Ccircle cx='41' cy='29' r='1.6' fill='%23fff'/%3E%3C/svg%3E" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;800&family=Share+Tech+Mono&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Bungee&family=Nunito:wght@600;800;900&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="./style.css" />
   </head>
   <body>
     <canvas id="game-canvas"></canvas>
     <div id="vignette" aria-hidden="true"></div>
-
     <div id="hurt" aria-hidden="true"></div>
-    <div id="blood-splatter" aria-hidden="true"></div>
 
     <div id="hud" class="hidden">
       <div id="wave-readout">
         <span class="label">DALGA</span>
         <span id="wave-number">1</span>
-        <span class="sep">:</span>
-        <span id="zombies-left">0</span>
-        <span class="label dim">ZOMBİ KALDI</span>
+        <span id="wave-timer">0:45</span>
       </div>
 
-      <div id="xp-readout">PUAN <span id="xp-value">0</span></div>
-
-      <div id="crosshair">
-        <span class="ring"></span>
-        <span class="dot"></span>
-        <span class="tick t"></span>
-        <span class="tick r"></span>
-        <span class="tick b"></span>
-        <span class="tick l"></span>
-      </div>
-
-      <div id="hitmarker" class="hidden"></div>
-      <div id="hit-feed"></div>
-      <div id="pickup-toast"></div>
+      <div id="mat-readout">MAT <span id="mat-value">0</span></div>
 
       <div id="wave-banner" class="hidden">
         <div id="banner-title">DALGA 1</div>
-        <div id="banner-sub">HAZIRLAN</div>
+        <div id="banner-sub">HAYATTA KAL</div>
       </div>
 
       <div id="bottom-left">
         <div id="health-wrap">
-          <div class="stat-label">CAN: <span id="health-text">100%</span></div>
-          <div id="health-bar"><div id="health-fill"></div></div>
+          <div class="stat-label">CAN: <span id="hp-text">100 / 100</span></div>
+          <div id="health-bar"><div id="hp-fill"></div></div>
         </div>
-        <div id="minimap-wrap">
-          <canvas id="minimap" width="176" height="176"></canvas>
-          <div class="mini-label">HARİTA</div>
-        </div>
-        <div id="medkit-wrap">
-          <span class="kit-icon"></span>
-          İLK YARDIM: <span id="medkit-count">1</span>
-          <span class="hint">[H]</span>
+        <div id="xp-wrap">
+          <div class="stat-label dim">XP</div>
+          <div id="xp-bar"><div id="xp-fill"></div></div>
         </div>
       </div>
 
       <div id="bottom-right">
-        <div id="ammo-wrap">
-          <div id="ammo-mag">30</div>
-          <div id="ammo-reserve">/ 180</div>
-          <div id="ammo-pips"></div>
+        <div class="meta-line">LEŞ <span id="kill-value">0</span></div>
+        <div class="meta-line">SLOTLAR <span id="slot-value">1/6</span></div>
+      </div>
+    </div>
+
+    <div id="shop" class="overlay hidden">
+      <div class="shop-panel">
+        <header class="shop-head">
+          <div>
+            <p class="kicker">DALGA <span id="shop-wave">1</span> BİTTİ</p>
+            <h2>TEÇHİZAT</h2>
+          </div>
+          <div class="shop-currency">
+            <span>MAT <strong id="shop-mat">0</strong></span>
+            <span class="slots">SİLAH <strong id="shop-slots">1/6</strong></span>
+          </div>
+        </header>
+        <div id="shop-stats" class="shop-stats"></div>
+        <div id="shop-offers" class="offer-grid"></div>
+        <div class="shop-actions">
+          <button id="shop-reroll" type="button" class="btn-ghost">YENİLE (<span id="reroll-cost">8</span>)</button>
+          <button id="shop-next" type="button" class="primary">SONRAKİ DALGA</button>
         </div>
-        <div id="weapon-name">M4 BÜKÜCÜ · ŞARJÖR [R]</div>
-        <div id="reload-bar" class="hidden"><div id="reload-fill"></div></div>
       </div>
     </div>
 
@@ -84,45 +78,40 @@
       </div>
     </div>
 
-    <div id="overlay-start" class="overlay">
-      <div class="overlay-inner">
-        <h1>ZOMBİ BÜKÜCÜ</h1>
-        <p class="sub">ŞEHRİN ORTASI</p>
-        <p class="blurb">
-          Şehir düştü. Kavşağı tut, dalgalar bitene kadar şarjör boşalt
-          ve mümkün olduğunca uzun hayatta kal.
+    <div id="overlay-start" class="splash">
+      <div class="splash-crawl" aria-hidden="true">
+        <span class="bug b1"></span>
+        <span class="bug b2"></span>
+        <span class="bug b3"></span>
+        <span class="bug b4"></span>
+        <span class="bug b5"></span>
+      </div>
+      <div class="splash-copy">
+        <p class="splash-kicker">üstten görünüm · yörünge silah</p>
+        <h1 class="splash-title">BÖ<span class="oo">Ö</span>CÜK</h1>
+        <p class="splash-tag">küçük böcek. büyük namlu.</p>
+        <p class="splash-blurb">
+          Kovanın ortasında dur. Silahların etrafında döner, en yakındaki
+          böceği kendi avlar. Yeşil damlaları em, dalga bitince evrim geçir.
         </p>
-        <ul class="controls">
-          <li><kbd>W A S D</kbd> Hareket</li>
-          <li><kbd>SHIFT</kbd> Koş</li>
-          <li><kbd>BOŞLUK</kbd> Zıpla</li>
-          <li><kbd>SOL TIK</kbd> Ateş</li>
-          <li><kbd>SAĞ TIK</kbd> Nişan al</li>
-          <li><kbd>R</kbd> Şarjör değiştir</li>
-          <li><kbd>H</kbd> İlk yardım kullan</li>
-          <li><kbd>E</kbd> Malzeme al</li>
-          <li><kbd>ESC</kbd> Duraklat</li>
-        </ul>
-        <div class="start-actions">
-          <button id="btn-start" type="button">OYNA</button>
-          <button id="btn-fullscreen" type="button" class="btn-ghost">TAM EKRAN</button>
-          <a id="btn-home" class="btn-ghost" href="https://www.oyuncum.site/">ANA SAYFA</a>
-        </div>
+        <button id="btn-start" type="button" class="splash-play">BAŞLA — TAM EKRAN</button>
+        <p class="splash-keys">WASD hareket · ESC duraklat</p>
+        <a id="btn-home" class="splash-home" href="https://www.oyuncum.site/">oyuncum.site</a>
       </div>
     </div>
 
     <div id="overlay-gameover" class="overlay hidden">
-      <div class="overlay-inner">
-        <p class="kicker danger">ÖLDÜN</p>
-        <h1>ÖLDÜN</h1>
-        <p class="sub" id="death-flavor">Sokaklar sustu.</p>
+      <div class="go-card">
+        <p class="go-kicker">EZİLDİN</p>
+        <h1 class="go-title">BÖÖCÜK BİTTİ</h1>
+        <p class="sub" id="death-flavor">Kovan seni yuttu.</p>
         <div class="stats-grid">
           <div>
             <span class="stat-k">DALGA</span>
             <span class="stat-v" id="go-wave">1</span>
           </div>
           <div>
-            <span class="stat-k">PUAN</span>
+            <span class="stat-k">MAT</span>
             <span class="stat-v" id="go-xp">0</span>
           </div>
           <div>
@@ -130,10 +119,10 @@
             <span class="stat-v" id="go-kills">0</span>
           </div>
         </div>
-        <button id="btn-restart" type="button">YENİDEN BAŞLA (ENTER)</button>
+        <button id="btn-restart" type="button" class="splash-play go-again">YENİDEN (ENTER)</button>
       </div>
     </div>
 
-    <script type="module" src="/src/main.js"></script>
+    <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

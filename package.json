@@ -1,27 +1,26 @@
 {
-  "name": "zombi-bukucu",
+  "name": "bocuk",
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "Tarayıcıda çalışan 3D FPS zombi hayatta kalma oyunu. Three.js ve Vite.",
+  "description": "BÖÖCÜK — üstten görünüm otomatik av. HTML5 Canvas, Vite, TypeScript.",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "tsc --noEmit && vite build",
     "preview": "vite preview"
   },
   "keywords": [
-    "three.js",
-    "fps",
-    "zombie",
-    "survival",
-    "webgl",
-    "vite"
+    "canvas",
+    "typescript",
+    "vite",
+    "top-down",
+    "arena-shooter",
+    "brotato",
+    "zombie"
   ],
   "license": "MIT",
-  "dependencies": {
-    "three": "^0.180.0"
-  },
   "devDependencies": {
+    "typescript": "^5.8.3",
     "vite": "^6.3.5"
   }
 }
