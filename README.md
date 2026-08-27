@@ -13,7 +13,7 @@ npm install
 npm run dev
 ```
 
-`BAŞLA — TAM EKRAN` oyunu tam ekranda açar.
+`BAŞLA` oyunu tam ekranda açar.
 
 | Tuş | Aksiyon |
 | --- | --- |
