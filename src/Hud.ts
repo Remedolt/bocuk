@@ -75,7 +75,7 @@ export class Hud {
     this.slots.textContent = `${weapons.length}/6`;
 
     if (clearing) {
-      this.timer.textContent = 'TEMİZLE';
+      this.timer.textContent = 'BİTTİ';
       this.timer.classList.add('warn');
     } else {
       const t = Math.max(0, Math.ceil(spawner.timer));

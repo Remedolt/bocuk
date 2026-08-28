@@ -1,4 +1,4 @@
-import { ARENA, ENEMY_DEFS } from './constants';
+import { ARENA, ENEMY_DEFS, WAVE } from './constants';
 import { drawShadow, drawSprite } from './draw';
 import { clamp } from './math';
 import type { Assets } from './Assets';
@@ -25,11 +25,13 @@ export class Enemy {
   alive = false;
   attackCd = 0;
   hitFlash = 0;
+  walk = 0;
 
   spawn(kind: EnemyKind, x: number, y: number, wave: number): void {
     const def = ENEMY_DEFS[kind];
-    const hpScale = 1 + (wave - 1) * 0.2;
-    const spdScale = 1 + (wave - 1) * 0.045;
+    const hard = WAVE.difficulty;
+    const hpScale = (1 + (wave - 1) * 0.2) * hard;
+    const spdScale = (1 + (wave - 1) * 0.045) * (kind === 'boss' ? 1 : 1.04);
     this.id = nextId++;
     this.kind = kind;
     this.x = x;
@@ -38,14 +40,15 @@ export class Enemy {
     this.maxHp = Math.round(def.hp * hpScale);
     this.hp = this.maxHp;
     this.speed = def.speed * spdScale;
-    this.damage = Math.round(def.damage * (1 + (wave - 1) * 0.08));
-    this.xp = def.xp + Math.floor(wave / 2);
+    this.damage = Math.round(def.damage * hard * (1 + (wave - 1) * 0.08));
+    this.xp = def.xp + Math.floor(wave / 2) + (kind === 'boss' ? wave * 4 : 0);
     this.color = def.color;
     this.eye = def.eye;
     this.spriteSize = def.spriteSize;
     this.alive = true;
     this.attackCd = 0;
     this.hitFlash = 0;
+    this.walk = Math.random() * Math.PI * 2;
   }
 
   update(dt: number, player: Player): void {
@@ -61,6 +64,7 @@ export class Enemy {
     this.y = clamp(this.y, -limit, limit);
     this.attackCd = Math.max(0, this.attackCd - dt);
     this.hitFlash = Math.max(0, this.hitFlash - dt);
+    this.walk += dt * 10;
   }
 
   hurt(amount: number): { killed: boolean; xp: number } {
@@ -80,29 +84,197 @@ export class Enemy {
     drawShadow(ctx, this.x, this.y, this.radius * 1.1, this.radius * 0.5);
     const img = assets.enemy(this.kind);
     drawSprite(ctx, img, this.x, this.y, this.spriteSize, this.spriteSize, this.angle, () => {
-      this.drawFallback(ctx);
+      this.drawKind(ctx);
     });
-    if (this.hp < this.maxHp) this.drawHp(ctx);
+    if (this.kind === 'boss' || this.hp < this.maxHp) this.drawHp(ctx);
   }
 
-  private drawFallback(ctx: CanvasRenderingContext2D): void {
+  private drawKind(ctx: CanvasRenderingContext2D): void {
     const r = this.radius;
-    ctx.fillStyle = this.hitFlash > 0 ? '#f2e8d8' : this.color;
+    const flash = this.hitFlash > 0;
+    const body = flash ? '#f2e8d8' : this.color;
+    const kick = Math.sin(this.walk) * 0.18;
+
+    if (this.kind === 'boss') {
+      ctx.fillStyle = '#2a0810';
+      ctx.beginPath();
+      ctx.ellipse(0, 8, r * 1.05, r * 0.55, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = body;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, r * 1.05, r * 0.92, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#8a2030';
+      ctx.beginPath();
+      ctx.ellipse(0, -r * 0.15, r * 0.72, r * 0.5, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#ffe14a';
+      ctx.beginPath();
+      ctx.moveTo(-r * 0.55, -r * 0.55);
+      ctx.lineTo(-r * 0.28, -r * 1.15);
+      ctx.lineTo(-0.08 * r, -r * 0.55);
+      ctx.moveTo(r * 0.55, -r * 0.55);
+      ctx.lineTo(r * 0.28, -r * 1.15);
+      ctx.lineTo(0.08 * r, -r * 0.55);
+      ctx.moveTo(0, -r * 0.62);
+      ctx.lineTo(0, -r * 1.28);
+      ctx.lineTo(r * 0.18, -r * 0.62);
+      ctx.fill();
+      ctx.fillStyle = this.eye;
+      ctx.beginPath();
+      ctx.arc(-r * 0.28, -r * 0.12, 5, 0, Math.PI * 2);
+      ctx.arc(r * 0.28, -r * 0.12, 5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#140408';
+      ctx.beginPath();
+      ctx.arc(-r * 0.28, -r * 0.12, 2, 0, Math.PI * 2);
+      ctx.arc(r * 0.28, -r * 0.12, 2, 0, Math.PI * 2);
+      ctx.fill();
+      return;
+    }
+
+    if (this.kind === 'runner') {
+      ctx.fillStyle = body;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, r * 0.55, r * 1.15, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#3a2a10';
+      ctx.lineWidth = 2.2;
+      ctx.beginPath();
+      ctx.moveTo(-r * 0.35, r * 0.2);
+      ctx.lineTo(-r * 0.95, r * 0.85 + kick * 8);
+      ctx.moveTo(r * 0.35, r * 0.2);
+      ctx.lineTo(r * 0.95, r * 0.85 - kick * 8);
+      ctx.stroke();
+      ctx.fillStyle = this.eye;
+      ctx.beginPath();
+      ctx.arc(-3, -r * 0.55, 2.4, 0, Math.PI * 2);
+      ctx.arc(3, -r * 0.55, 2.4, 0, Math.PI * 2);
+      ctx.fill();
+      return;
+    }
+
+    if (this.kind === 'beetle') {
+      ctx.fillStyle = '#2a1810';
+      ctx.beginPath();
+      ctx.ellipse(0, 6, r * 0.7, r * 0.35, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = body;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, r * 0.95, r * 0.78, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(0,0,0,0.35)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(0, -r * 0.6);
+      ctx.lineTo(0, r * 0.55);
+      ctx.stroke();
+      ctx.fillStyle = '#1a1008';
+      ctx.beginPath();
+      ctx.ellipse(0, -r * 0.55, r * 0.4, r * 0.32, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = this.eye;
+      ctx.beginPath();
+      ctx.arc(-4, -r * 0.55, 2.2, 0, Math.PI * 2);
+      ctx.arc(4, -r * 0.55, 2.2, 0, Math.PI * 2);
+      ctx.fill();
+      return;
+    }
+
+    if (this.kind === 'wasp') {
+      ctx.globalAlpha = 0.35;
+      ctx.fillStyle = '#e8f0ff';
+      ctx.beginPath();
+      ctx.ellipse(-r * 0.15, 2, r * 0.85, r * 0.35, -0.4 + kick, 0, Math.PI * 2);
+      ctx.ellipse(r * 0.15, 2, r * 0.85, r * 0.35, 0.4 - kick, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = body;
+      ctx.beginPath();
+      ctx.ellipse(0, 2, r * 0.42, r * 0.85, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#1a1208';
+      ctx.fillRect(-r * 0.2, -2, r * 0.4, 3);
+      ctx.fillRect(-r * 0.2, 6, r * 0.4, 3);
+      ctx.fillStyle = '#3a2a10';
+      ctx.beginPath();
+      ctx.moveTo(0, r * 0.9);
+      ctx.lineTo(-3, r * 1.35);
+      ctx.lineTo(3, r * 1.35);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = this.eye;
+      ctx.beginPath();
+      ctx.arc(-3, -r * 0.55, 2.6, 0, Math.PI * 2);
+      ctx.arc(3, -r * 0.55, 2.6, 0, Math.PI * 2);
+      ctx.fill();
+      return;
+    }
+
+    if (this.kind === 'tank') {
+      ctx.fillStyle = body;
+      ctx.beginPath();
+      ctx.ellipse(0, 2, r * 1.05, r * 0.95, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#2a2218';
+      ctx.beginPath();
+      ctx.moveTo(-r * 0.55, -r * 0.2);
+      ctx.lineTo(-r * 0.95, -r * 0.85);
+      ctx.lineTo(-r * 0.25, -r * 0.45);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(r * 0.55, -r * 0.2);
+      ctx.lineTo(r * 0.95, -r * 0.85);
+      ctx.lineTo(r * 0.25, -r * 0.45);
+      ctx.fill();
+      ctx.fillStyle = this.eye;
+      ctx.beginPath();
+      ctx.arc(-6, -r * 0.2, 3.2, 0, Math.PI * 2);
+      ctx.arc(6, -r * 0.2, 3.2, 0, Math.PI * 2);
+      ctx.fill();
+      return;
+    }
+
+    if (this.kind === 'spitter') {
+      ctx.fillStyle = body;
+      ctx.beginPath();
+      ctx.ellipse(0, 4, r * 0.7, r * 0.85, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#6a2a88';
+      ctx.beginPath();
+      ctx.ellipse(0, -r * 0.45, r * 0.62, r * 0.5, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#1a0818';
+      ctx.beginPath();
+      ctx.ellipse(0, -r * 0.35, r * 0.32, r * 0.18, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = this.eye;
+      ctx.beginPath();
+      ctx.arc(-6, -r * 0.62, 2.4, 0, Math.PI * 2);
+      ctx.arc(6, -r * 0.62, 2.4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#7dff9a';
+      ctx.globalAlpha = 0.7;
+      ctx.beginPath();
+      ctx.arc(0, -r * 0.2, 3, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+      return;
+    }
+
+    ctx.fillStyle = body;
     ctx.beginPath();
     ctx.ellipse(0, 2, r * 0.85, r * 1.05, 0, 0, Math.PI * 2);
     ctx.fill();
-
     ctx.fillStyle = '#3a332c';
     ctx.beginPath();
-    ctx.ellipse(-r * 0.55, -r * 0.15, r * 0.28, r * 0.7, 0.4, 0, Math.PI * 2);
-    ctx.ellipse(r * 0.55, -r * 0.15, r * 0.28, r * 0.7, -0.4, 0, Math.PI * 2);
+    ctx.ellipse(-r * 0.55, -r * 0.15, r * 0.28, r * 0.7, 0.4 + kick, 0, Math.PI * 2);
+    ctx.ellipse(r * 0.55, -r * 0.15, r * 0.28, r * 0.7, -0.4 - kick, 0, Math.PI * 2);
     ctx.fill();
-
     ctx.fillStyle = '#6e7a58';
     ctx.beginPath();
     ctx.ellipse(0, -r * 0.55, r * 0.48, r * 0.4, 0, 0, Math.PI * 2);
     ctx.fill();
-
     ctx.fillStyle = this.eye;
     ctx.beginPath();
     ctx.arc(-r * 0.16, -r * 0.58, 2.4, 0, Math.PI * 2);
@@ -111,13 +283,15 @@ export class Enemy {
   }
 
   private drawHp(ctx: CanvasRenderingContext2D): void {
-    const w = Math.max(22, this.radius * 2);
+    const boss = this.kind === 'boss';
+    const w = Math.max(22, this.radius * (boss ? 2.4 : 2));
+    const h = boss ? 5 : 3;
     const x = this.x - w / 2;
-    const y = this.y - this.radius - 12;
+    const y = this.y - this.radius - (boss ? 18 : 12);
     ctx.fillStyle = 'rgba(0,0,0,0.5)';
-    ctx.fillRect(x, y, w, 3);
-    ctx.fillStyle = '#ff4d4d';
-    ctx.fillRect(x, y, w * (this.hp / this.maxHp), 3);
+    ctx.fillRect(x, y, w, h);
+    ctx.fillStyle = boss ? '#ffe14a' : '#ff4d4d';
+    ctx.fillRect(x, y, w * (this.hp / this.maxHp), h);
   }
 }
 

@@ -1,4 +1,4 @@
-import { MAX_WEAPON_SLOTS, WEAPON_DEFS } from './constants';
+import { MAX_WEAPON_RANK, MAX_WEAPON_SLOTS, RANK_MARK, WEAPON_DEFS } from './constants';
 import { pick } from './math';
 import type { Player } from './Player';
 import type { Weapon } from './Weapon';
@@ -21,6 +21,7 @@ export class ShopUI {
   private rerollCost = 8;
   private offers: ShopOffer[] = [];
   private addWeapon: ((id: WeaponId) => boolean) | null = null;
+  private mergeWeapon: ((id: WeaponId) => boolean) | null = null;
   onContinue: (() => void) | null = null;
 
   constructor() {
@@ -45,11 +46,18 @@ export class ShopUI {
     return !this.root.classList.contains('hidden');
   }
 
-  show(player: Player, weapons: Weapon[], wave: number, addWeapon: (id: WeaponId) => boolean): void {
+  show(
+    player: Player,
+    weapons: Weapon[],
+    wave: number,
+    addWeapon: (id: WeaponId) => boolean,
+    mergeWeapon: (id: WeaponId) => boolean,
+  ): void {
     this.player = player;
     this.weapons = weapons;
     this.wave = wave;
     this.addWeapon = addWeapon;
+    this.mergeWeapon = mergeWeapon;
     this.rerollCost = 6 + wave * 2;
     this.root.classList.remove('hidden');
     this.rollOffers();
@@ -138,21 +146,22 @@ export class ShopUI {
     ];
 
     if (this.weapons.length < MAX_WEAPON_SLOTS) {
-      const ids = (Object.keys(WEAPON_DEFS) as WeaponId[]).filter((id) => id !== 'pistol');
+      const ids = Object.keys(WEAPON_DEFS) as WeaponId[];
       for (const id of ids) {
         const def = WEAPON_DEFS[id];
         pool.push({
           id: `w-${id}-${Math.random().toString(36).slice(2, 6)}`,
           title: def.name,
           desc: `Slot silahı · ${def.damage} hasar`,
-          cost: this.scale(def.price || 22),
+          cost: this.scale(def.price || 18),
           tint: def.glow,
           apply: () => this.addWeapon?.(id) ?? false,
         });
       }
     }
 
-    const picked: ShopOffer[] = [];
+    const merges = this.mergeOffers();
+    const picked: ShopOffer[] = [...merges];
     const bag = [...pool];
     while (picked.length < 4 && bag.length) {
       const item = pick(bag);
@@ -160,6 +169,30 @@ export class ShopUI {
       picked.push(item);
     }
     this.offers = picked;
+  }
+
+  private mergeOffers(): ShopOffer[] {
+    const seen = new Set<WeaponId>();
+    const out: ShopOffer[] = [];
+    for (const gun of this.weapons) {
+      const id = gun.def.id;
+      if (seen.has(id)) continue;
+      seen.add(id);
+      const copies = this.weapons.filter((w) => w.def.id === id).sort((a, b) => b.rank - a.rank);
+      if (copies.length < 2) continue;
+      const keep = copies[0]!;
+      if (keep.rank >= MAX_WEAPON_RANK) continue;
+      const next = keep.rank + 1;
+      out.push({
+        id: `merge-${id}`,
+        title: `Birleştir ${keep.def.name} → ${RANK_MARK[next]}`,
+        desc: 'Aynı iki silah tek yuvada güçlenir',
+        cost: this.scale(10 + keep.rank * 4),
+        tint: keep.def.glow,
+        apply: () => this.mergeWeapon?.(id) ?? false,
+      });
+    }
+    return out;
   }
 
   private reroll(): void {
@@ -176,8 +209,11 @@ export class ShopUI {
     if (!p || p.materials < offer.cost) return;
     p.materials -= offer.cost;
     offer.apply();
-    this.offers = this.offers.filter((o) => o !== offer);
-    if (this.offers.length === 0) this.rollOffers();
+    if (offer.id.startsWith('merge-')) this.rollOffers();
+    else {
+      this.offers = this.offers.filter((o) => o !== offer);
+      if (this.offers.length === 0) this.rollOffers();
+    }
     this.refresh();
   }
 

@@ -1,4 +1,5 @@
 import { ASSET_PATHS } from './constants';
+import type { EnemyKind } from './types';
 
 export type AssetKey = keyof typeof ASSET_PATHS;
 
@@ -31,9 +32,13 @@ export class Assets {
     return this.images[key] ?? null;
   }
 
-  enemy(kind: 'walker' | 'runner' | 'tank'): HTMLImageElement | null {
-    if (kind === 'runner') return this.get('enemyRunner') ?? this.get('enemy');
-    if (kind === 'tank') return this.get('enemyTank') ?? this.get('enemy');
+  enemy(kind: EnemyKind): HTMLImageElement | null {
+    if (kind === 'runner') return this.get('enemyRunner');
+    if (kind === 'tank') return this.get('enemyTank');
+    if (kind === 'beetle') return this.get('enemyBeetle');
+    if (kind === 'wasp') return this.get('enemyWasp');
+    if (kind === 'spitter') return this.get('enemySpitter');
+    if (kind === 'boss') return this.get('enemyBoss');
     return this.get('enemy');
   }
 }

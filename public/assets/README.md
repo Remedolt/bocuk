@@ -7,9 +7,12 @@ Dosyayı buraya bırakman yeterli — kod tarafı `ctx.drawImage` ile bağlanır
 | Dosya | Yerine geçer |
 | --- | --- |
 | `player.png` | Oyuncu |
-| `enemy.png` | Yürüyen |
-| `enemy-runner.png` | Koşucu (yoksa `enemy.png`) |
-| `enemy-tank.png` | Canavar (yoksa `enemy.png`) |
+| `enemy.png` | Larva (dalga 1) |
+| `enemy-runner.png` | Sıçrayan |
+| `enemy-beetle.png` | Böcek |
+| `enemy-wasp.png` | Eşekarısı |
+| `enemy-tank.png` | Canavar |
+| `enemy-spitter.png` | Tüküren |
 | `weapon.png` | Yörünge silahları |
 | `projectile.png` | Mermiler |
 | `xp.png` | Materyal küresi |

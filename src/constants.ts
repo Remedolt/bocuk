@@ -1,4 +1,4 @@
-import type { EnemyDef, EnemyKind, WeaponDef, WeaponId } from './types';
+import type { ArenaTheme, EnemyDef, EnemyKind, HeroDef, HeroId, WeaponDef, WeaponId } from './types';
 
 export const GAME = {
   title: 'BÖÖCÜK',
@@ -19,20 +19,150 @@ export const CAMERA = {
 export const WAVE = {
   duration: 45,
   maxAlive: 72,
+  difficulty: 1.1,
+  bossEvery: 5,
+};
+
+export const CRYSTAL = {
+  hp: 26,
+  radius: 15,
+  chancePerSec: 0.003,
+  maxAlive: 1,
+  shards: 6,
+  shardValue: 2,
 };
 
 export const PLAYER = {
-  radius: 18,
-  spriteSize: 52,
+  radius: 20,
+  spriteSize: 57,
   speed: 235,
   maxHp: 100,
   armor: 0,
   damageMul: 1,
-  pickupRange: 48,
-  magnetRange: 128,
+  pickupRange: 64,
+  magnetRange: 240,
   invulnTime: 0.38,
-  orbitRadius: 64,
+  orbitRadius: 38,
   orbitSpeed: 1.35,
+};
+
+export const MAX_WEAPON_RANK = 5;
+export const RANK_MARK = ['', 'I', 'II', 'III', 'IV', 'V'];
+
+export const ARENA_THEMES: ArenaTheme[] = [
+  {
+    name: 'Kovan',
+    clear: '#12160f',
+    floor: [22, 30, 18],
+    accent: 'rgba(40, 70, 36, 0.28)',
+    wall: 'rgba(180, 40, 40, 0.45)',
+    wallInner: 'rgba(255, 70, 70, 0.18)',
+  },
+  {
+    name: 'Pas',
+    clear: '#1a0e0a',
+    floor: [36, 16, 10],
+    accent: 'rgba(140, 50, 18, 0.32)',
+    wall: 'rgba(220, 90, 30, 0.5)',
+    wallInner: 'rgba(255, 140, 50, 0.2)',
+  },
+  {
+    name: 'Gece',
+    clear: '#0a1018',
+    floor: [10, 16, 32],
+    accent: 'rgba(40, 70, 140, 0.3)',
+    wall: 'rgba(60, 110, 220, 0.5)',
+    wallInner: 'rgba(120, 180, 255, 0.2)',
+  },
+  {
+    name: 'Asit',
+    clear: '#10140c',
+    floor: [16, 32, 12],
+    accent: 'rgba(80, 160, 40, 0.3)',
+    wall: 'rgba(180, 40, 180, 0.45)',
+    wallInner: 'rgba(220, 80, 255, 0.2)',
+  },
+  {
+    name: 'Kemik',
+    clear: '#16140f',
+    floor: [30, 28, 22],
+    accent: 'rgba(160, 140, 90, 0.28)',
+    wall: 'rgba(200, 180, 120, 0.42)',
+    wallInner: 'rgba(255, 230, 170, 0.16)',
+  },
+];
+
+export function themeIndexForWave(wave: number): number {
+  return Math.floor(Math.max(0, wave - 1) / WAVE.bossEvery) % ARENA_THEMES.length;
+}
+
+export const HERO_IDS: HeroId[] = ['kurtcuk', 'kabuk', 'isik', 'suru'];
+
+export const HERO_DEFS: Record<HeroId, HeroDef> = {
+  kurtcuk: {
+    id: 'kurtcuk',
+    name: 'Kurtçuk',
+    blurb: 'dengeli avcı',
+    maxHp: 100,
+    speed: 235,
+    armor: 0,
+    damageMul: 1,
+    pickupRange: 64,
+    magnetRange: 240,
+    body: '#3d4a3a',
+    shell: '#5a6b52',
+    skin: '#c8b090',
+    eye: '#7dff9a',
+    accent: '#c8ff3d',
+  },
+  kabuk: {
+    id: 'kabuk',
+    name: 'Kabuk',
+    blurb: 'kalın zırh · yavaş',
+    maxHp: 140,
+    speed: 198,
+    armor: 14,
+    damageMul: 0.95,
+    pickupRange: 60,
+    magnetRange: 220,
+    body: '#4a3220',
+    shell: '#8a5a30',
+    skin: '#d4b896',
+    eye: '#ffcc66',
+    accent: '#e8a05a',
+  },
+  isik: {
+    id: 'isik',
+    name: 'Işık',
+    blurb: 'yüksek hasar · ince',
+    maxHp: 78,
+    speed: 252,
+    armor: 0,
+    damageMul: 1.24,
+    pickupRange: 62,
+    magnetRange: 230,
+    body: '#3a4a22',
+    shell: '#c8ff3d',
+    skin: '#eef6c8',
+    eye: '#ffe14a',
+    accent: '#ffe14a',
+  },
+  suru: {
+    id: 'suru',
+    name: 'Sürü',
+    blurb: 'mıknatıs · yağmacı',
+    maxHp: 92,
+    speed: 228,
+    armor: 4,
+    damageMul: 1,
+    pickupRange: 92,
+    magnetRange: 340,
+    body: '#3a2034',
+    shell: '#ff3d7f',
+    skin: '#e8b0c8',
+    eye: '#ff7ab8',
+    accent: '#ff3d7f',
+  },
 };
 
 export const WEAPON_DEFS: Record<WeaponId, WeaponDef> = {
@@ -42,8 +172,8 @@ export const WEAPON_DEFS: Record<WeaponId, WeaponDef> = {
     damage: 14,
     fireInterval: 0.42,
     range: 360,
-    projectileSpeed: 560,
-    projectileRadius: 4,
+    projectileSpeed: 720,
+    projectileRadius: 2.2,
     pellets: 1,
     spread: 0.04,
     pierce: 0,
@@ -57,8 +187,8 @@ export const WEAPON_DEFS: Record<WeaponId, WeaponDef> = {
     damage: 7,
     fireInterval: 0.11,
     range: 250,
-    projectileSpeed: 620,
-    projectileRadius: 3.2,
+    projectileSpeed: 780,
+    projectileRadius: 1.8,
     pellets: 1,
     spread: 0.12,
     pierce: 0,
@@ -72,8 +202,8 @@ export const WEAPON_DEFS: Record<WeaponId, WeaponDef> = {
     damage: 8,
     fireInterval: 0.72,
     range: 170,
-    projectileSpeed: 500,
-    projectileRadius: 3.5,
+    projectileSpeed: 620,
+    projectileRadius: 2.4,
     pellets: 6,
     spread: 0.42,
     pierce: 0,
@@ -87,8 +217,8 @@ export const WEAPON_DEFS: Record<WeaponId, WeaponDef> = {
     damage: 58,
     fireInterval: 1.05,
     range: 560,
-    projectileSpeed: 920,
-    projectileRadius: 4.5,
+    projectileSpeed: 1100,
+    projectileRadius: 2.4,
     pellets: 1,
     spread: 0.01,
     pierce: 2,
@@ -117,8 +247,8 @@ export const WEAPON_DEFS: Record<WeaponId, WeaponDef> = {
     damage: 5,
     fireInterval: 0.055,
     range: 280,
-    projectileSpeed: 700,
-    projectileRadius: 3,
+    projectileSpeed: 860,
+    projectileRadius: 2,
     pellets: 1,
     spread: 0.16,
     pierce: 0,
@@ -129,32 +259,66 @@ export const WEAPON_DEFS: Record<WeaponId, WeaponDef> = {
 };
 
 export const STARTER_WEAPON: WeaponId = 'pistol';
+export const WEAPON_IDS: WeaponId[] = ['pistol', 'smg', 'shotgun', 'sniper', 'plasma', 'minigun'];
 export const MAX_WEAPON_SLOTS = 6;
+
+export const WEAPON_BLURB: Record<WeaponId, string> = {
+  pistol: 'dengeli · orta menzil',
+  smg: 'seri ateş',
+  shotgun: 'yakın · 6 saçma',
+  sniper: 'delici · uzun menzil',
+  plasma: 'enerji topu',
+  minigun: 'mermi yağmuru',
+};
 
 export const ENEMY_DEFS: Record<EnemyKind, EnemyDef> = {
   walker: {
     kind: 'walker',
-    name: 'Yürüyen',
+    name: 'Larva',
     hp: 28,
     speed: 82,
     damage: 8,
     radius: 16,
-    xp: 3,
+    xp: 1,
     color: '#c4d46a',
     eye: '#ff2a12',
     spriteSize: 46,
   },
   runner: {
     kind: 'runner',
-    name: 'Koşucu',
+    name: 'Sıçrayan',
     hp: 16,
     speed: 150,
     damage: 6,
     radius: 14,
     xp: 4,
-    color: '#6a7d4a',
-    eye: '#ffcc22',
+    color: '#e8c84a',
+    eye: '#ff6a00',
     spriteSize: 42,
+  },
+  beetle: {
+    kind: 'beetle',
+    name: 'Böcek',
+    hp: 48,
+    speed: 70,
+    damage: 10,
+    radius: 18,
+    xp: 5,
+    color: '#7a4a28',
+    eye: '#ffcc44',
+    spriteSize: 50,
+  },
+  wasp: {
+    kind: 'wasp',
+    name: 'Eşekarısı',
+    hp: 18,
+    speed: 175,
+    damage: 7,
+    radius: 13,
+    xp: 6,
+    color: '#f0d060',
+    eye: '#1a1208',
+    spriteSize: 44,
   },
   tank: {
     kind: 'tank',
@@ -164,9 +328,33 @@ export const ENEMY_DEFS: Record<EnemyKind, EnemyDef> = {
     damage: 16,
     radius: 24,
     xp: 10,
-    color: '#5c5348',
+    color: '#4a4038',
     eye: '#ddf3ff',
     spriteSize: 64,
+  },
+  spitter: {
+    kind: 'spitter',
+    name: 'Tüküren',
+    hp: 36,
+    speed: 88,
+    damage: 12,
+    radius: 17,
+    xp: 7,
+    color: '#8a4aaa',
+    eye: '#7dff9a',
+    spriteSize: 50,
+  },
+  boss: {
+    kind: 'boss',
+    name: 'Kraliçe',
+    hp: 520,
+    speed: 46,
+    damage: 24,
+    radius: 40,
+    xp: 48,
+    color: '#6a1828',
+    eye: '#ffe14a',
+    spriteSize: 108,
   },
 };
 
@@ -175,7 +363,11 @@ export const ASSET_PATHS = {
   player: './assets/player.png',
   enemy: './assets/enemy.png',
   enemyRunner: './assets/enemy-runner.png',
+  enemyBeetle: './assets/enemy-beetle.png',
+  enemyWasp: './assets/enemy-wasp.png',
   enemyTank: './assets/enemy-tank.png',
+  enemySpitter: './assets/enemy-spitter.png',
+  enemyBoss: './assets/enemy-boss.png',
   weapon: './assets/weapon.png',
   projectile: './assets/projectile.png',
   xp: './assets/xp.png',

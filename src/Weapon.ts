@@ -1,8 +1,7 @@
-import { PLAYER } from './constants';
+import { MAX_WEAPON_RANK, PLAYER, RANK_MARK } from './constants';
 import { distSq } from './math';
-import type { Enemy } from './Enemy';
 import type { ProjectilePool } from './Projectile';
-import type { WeaponDef, WeaponId } from './types';
+import type { HuntTarget, WeaponDef, WeaponId } from './types';
 
 export class Weapon {
   x = 0;
@@ -10,8 +9,13 @@ export class Weapon {
   aim = 0;
   cooldown = 0;
   flash = 0;
+  rank = 1;
 
   constructor(readonly def: WeaponDef) {}
+
+  rankMul(): number {
+    return 1 + (this.rank - 1) * 0.45;
+  }
 
   update(
     dt: number,
@@ -29,11 +33,11 @@ export class Weapon {
     this.aim = a;
   }
 
-  nearest(enemies: Enemy[]): Enemy | null {
+  nearest(targets: HuntTarget[]): HuntTarget | null {
     const rangeSq = this.def.range * this.def.range;
-    let best: Enemy | null = null;
+    let best: HuntTarget | null = null;
     let bestD = rangeSq;
-    for (const e of enemies) {
+    for (const e of targets) {
       if (!e.alive) continue;
       const d = distSq(this.x, this.y, e.x, e.y);
       if (d < bestD) {
@@ -44,7 +48,7 @@ export class Weapon {
     return best;
   }
 
-  tryFire(pool: ProjectilePool, target: Enemy, damageMul: number): boolean {
+  tryFire(pool: ProjectilePool, target: HuntTarget, damageMul: number): boolean {
     if (this.cooldown > 0) return false;
     this.aim = Math.atan2(target.y - this.y, target.x - this.x);
     const pellets = this.def.pellets;
@@ -52,14 +56,14 @@ export class Weapon {
       const t = pellets === 1 ? 0 : (i / (pellets - 1) - 0.5);
       const ang = this.aim + t * this.def.spread + (Math.random() - 0.5) * this.def.spread * 0.25;
       pool.spawn(
-        this.x + Math.cos(ang) * 18,
-        this.y + Math.sin(ang) * 18,
+        this.x + Math.cos(ang) * 8,
+        this.y + Math.sin(ang) * 8,
         ang,
         this.def,
-        damageMul,
+        damageMul * this.rankMul(),
       );
     }
-    this.cooldown = this.def.fireInterval;
+    this.cooldown = this.def.fireInterval * Math.pow(0.88, this.rank - 1);
     this.flash = 0.09;
     return true;
   }
@@ -68,28 +72,47 @@ export class Weapon {
     ctx.save();
     ctx.translate(this.x, this.y);
     ctx.rotate(this.aim);
-    ctx.scale(1.85, 1.85);
+    const vis = 0.6864 * (1 + (this.rank - 1) * 0.08);
+    ctx.scale(vis, vis);
     ctx.fillStyle = 'rgba(0,0,0,0.4)';
     ctx.beginPath();
-    ctx.ellipse(2, 10, 14, 6, 0, 0, Math.PI * 2);
+    ctx.ellipse(2, 8, 10, 4, 0, 0, Math.PI * 2);
     ctx.fill();
 
     ctx.shadowColor = this.def.glow;
-    ctx.shadowBlur = this.flash > 0 ? 22 : 10;
+    ctx.shadowBlur = this.flash > 0 ? 8 : 3;
     this.drawBody(ctx);
     ctx.shadowBlur = 0;
 
     if (this.flash > 0) {
       const t = this.flash / 0.09;
-      ctx.fillStyle = `rgba(255, 240, 160, ${0.9 * t})`;
+      ctx.fillStyle = `rgba(255, 220, 140, ${0.85 * t})`;
       ctx.beginPath();
-      ctx.moveTo(22, 0);
-      ctx.lineTo(34, -7 * t);
-      ctx.lineTo(42 + 10 * t, 0);
-      ctx.lineTo(34, 7 * t);
+      ctx.moveTo(14, 0);
+      ctx.lineTo(20, -3.5 * t);
+      ctx.lineTo(24 + 4 * t, 0);
+      ctx.lineTo(20, 3.5 * t);
       ctx.closePath();
       ctx.fill();
     }
+    if (this.rank > 1) {
+      ctx.rotate(-this.aim);
+      ctx.fillStyle = '#ffe14a';
+      ctx.font = 'bold 11px Nunito, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(RANK_MARK[Math.min(this.rank, MAX_WEAPON_RANK)] ?? '', 0, -16);
+    }
+    ctx.restore();
+  }
+
+  drawPreview(ctx: CanvasRenderingContext2D, cx: number, cy: number, scale = 1.35): void {
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.scale(scale, scale);
+    ctx.shadowColor = this.def.glow;
+    ctx.shadowBlur = 8;
+    this.drawBody(ctx);
+    ctx.shadowBlur = 0;
     ctx.restore();
   }
 
@@ -106,7 +129,7 @@ export class Weapon {
   private ink(ctx: CanvasRenderingContext2D): void {
     ctx.lineJoin = 'round';
     ctx.lineCap = 'round';
-    ctx.lineWidth = 2.8;
+    ctx.lineWidth = 1.8;
     ctx.strokeStyle = '#140c08';
   }
 

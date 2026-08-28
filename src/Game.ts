@@ -1,12 +1,15 @@
-import { MAX_WEAPON_SLOTS, PLAYER, STARTER_WEAPON, WEAPON_DEFS } from './constants';
+import { CRYSTAL, HERO_DEFS, MAX_WEAPON_RANK, MAX_WEAPON_SLOTS, PLAYER, STARTER_WEAPON, WEAPON_DEFS } from './constants';
 import { distSq } from './math';
 import { Arena } from './Arena';
 import { Assets } from './Assets';
 import { Camera } from './Camera';
+import { Crystal, CrystalPool } from './Crystal';
 import { DropPool } from './DropItem';
 import { EnemyPool } from './Enemy';
+import { HeroUI } from './HeroUI';
 import { Hud } from './Hud';
 import { Input } from './Input';
+import { LoadoutUI } from './LoadoutUI';
 import { Particles } from './Particles';
 import { Player } from './Player';
 import { ProjectilePool } from './Projectile';
@@ -14,7 +17,7 @@ import { ShopUI } from './ShopUI';
 import { Sound } from './Sound';
 import { Spawner } from './Spawner';
 import { Weapon } from './Weapon';
-import type { GameState, WeaponId } from './types';
+import type { GameState, HeroId, WeaponId } from './types';
 
 export class Game {
   state: GameState = 'menu';
@@ -35,14 +38,18 @@ export class Game {
   private projectiles = new ProjectilePool();
   private enemies = new EnemyPool();
   private drops = new DropPool();
+  private crystals = new CrystalPool();
   private spawner = new Spawner();
   private particles = new Particles();
   private hud = new Hud();
   private shop = new ShopUI();
+  private heroes = new HeroUI();
+  private loadout = new LoadoutUI();
   private orbit = 0;
   private shopDelay = 0;
   private savedMagnet = PLAYER.magnetRange;
   private savedPickup = PLAYER.pickupRange;
+  private pickedHero: HeroId = 'kurtcuk';
 
   async init(): Promise<void> {
     this.canvas = document.getElementById('game-canvas') as HTMLCanvasElement;
@@ -51,6 +58,13 @@ export class Game {
     this.ctx = ctx;
     await this.assets.loadAll();
     this.shop.onContinue = () => this.nextWave();
+    this.heroes.onPick = (id) => {
+      this.pickedHero = id;
+      this.openLoadout();
+    };
+    this.heroes.onBack = () => this.quitToMenu();
+    this.loadout.onPick = (id) => this.start(id);
+    this.loadout.onBack = () => this.openHero();
     this.bind();
     this.resize();
     this.last = performance.now();
@@ -64,20 +78,22 @@ export class Game {
 
     document.getElementById('btn-start')!.addEventListener('click', () => {
       void this.ensureFullscreen();
-      this.start();
+      this.openHero();
     });
     document.getElementById('btn-restart')!.addEventListener('click', () => {
       void this.ensureFullscreen();
-      this.start();
+      this.openHero();
     });
     document.getElementById('btn-pause-fullscreen')?.addEventListener('click', () => this.toggleFullscreen());
     document.getElementById('btn-resume')?.addEventListener('click', () => this.resume());
     document.getElementById('btn-quit')?.addEventListener('click', () => this.quitToMenu());
 
     document.addEventListener('keydown', (e) => {
-      if (e.code === 'Enter' && this.state === 'gameover') this.start();
+      if (e.code === 'Enter' && this.state === 'gameover') this.openHero();
       if (e.code === 'Escape') {
-        if (this.state === 'paused') this.resume();
+        if (this.state === 'loadout') this.openHero();
+        else if (this.state === 'hero') this.quitToMenu();
+        else if (this.state === 'paused') this.resume();
         else if (this.state === 'playing' || this.state === 'clearing') this.pause();
       }
     });
@@ -95,28 +111,58 @@ export class Game {
     this.camera.resize(this.viewW, this.viewH);
   }
 
-  private start(): void {
-    this.sound.resume();
-    this.sound.wave();
-    void this.ensureFullscreen();
-    this.player.reset();
-    this.savedMagnet = this.player.magnetRange;
-    this.savedPickup = this.player.pickupRange;
-    this.weapons = [new Weapon(WEAPON_DEFS[STARTER_WEAPON])];
-    this.projectiles.clear();
-    this.enemies.clear();
-    this.drops.clear();
-    this.particles.clear();
-    this.orbit = 0;
-    this.shopDelay = 0;
+  private inRun(): boolean {
+    return this.state !== 'menu' && this.state !== 'hero' && this.state !== 'loadout';
+  }
+
+  private hideMenus(): void {
     this.shop.hide();
+    this.heroes.hide();
+    this.loadout.hide();
     this.hud.showStart(false);
     this.hud.showGameOver(false);
     this.hud.showPause(false);
+  }
+
+  private openHero(): void {
+    this.sound.resume();
+    void this.ensureFullscreen();
+    this.state = 'hero';
+    this.hideMenus();
+    this.hud.showHud(false);
+    this.heroes.show();
+  }
+
+  private openLoadout(): void {
+    this.sound.resume();
+    void this.ensureFullscreen();
+    this.state = 'loadout';
+    this.hideMenus();
+    this.hud.showHud(false);
+    this.loadout.show();
+  }
+
+  private start(weaponId: WeaponId = STARTER_WEAPON): void {
+    this.sound.resume();
+    this.sound.wave();
+    void this.ensureFullscreen();
+    this.player.reset(HERO_DEFS[this.pickedHero]);
+    this.savedMagnet = this.player.magnetRange;
+    this.savedPickup = this.player.pickupRange;
+    this.weapons = [new Weapon(WEAPON_DEFS[weaponId])];
+    this.projectiles.clear();
+    this.enemies.clear();
+    this.drops.clear();
+    this.crystals.clear();
+    this.particles.clear();
+    this.orbit = 0;
+    this.shopDelay = 0;
+    this.hideMenus();
     this.hud.showHud(true);
+    this.arena.setWave(1);
     this.spawner.startWave(1);
     this.state = 'playing';
-    this.hud.showBanner('DALGA 1', 'HAYATTA KAL');
+    this.hud.showBanner('DALGA 1', this.spawner.introLine());
   }
 
   private nextWave(): void {
@@ -124,11 +170,14 @@ export class Game {
     this.player.pickupRange = this.savedPickup;
     this.enemies.clear();
     this.projectiles.clear();
+    this.crystals.clear();
     this.shopDelay = 0;
     this.spawner.startWave(this.spawner.wave + 1);
+    this.arena.setWave(this.spawner.wave);
     this.state = 'playing';
     this.sound.wave();
-    this.hud.showBanner(`DALGA ${this.spawner.wave}`, 'DAHA SERT GELİYORLAR');
+    const title = this.spawner.isBossWave() ? 'PATRON' : `DALGA ${this.spawner.wave}`;
+    this.hud.showBanner(title, this.spawner.introLine(), this.spawner.isBossWave() ? 2.4 : 1.8);
   }
 
   private pause(): void {
@@ -139,15 +188,19 @@ export class Game {
 
   private resume(): void {
     if (this.state !== 'paused') return;
-    this.state = this.spawner.spawning ? 'playing' : 'clearing';
     this.hud.showPause(false);
+    if (this.spawner.spawning) {
+      this.state = 'playing';
+    } else if (this.enemies.count() > 0) {
+      this.finishWave();
+    } else {
+      this.state = 'clearing';
+    }
   }
 
   private quitToMenu(): void {
     this.state = 'menu';
-    this.shop.hide();
-    this.hud.showPause(false);
-    this.hud.showGameOver(false);
+    this.hideMenus();
     this.hud.showHud(false);
     this.hud.showStart(true);
   }
@@ -189,6 +242,18 @@ export class Game {
     return true;
   };
 
+  private mergeWeapon = (id: WeaponId): boolean => {
+    const copies = this.weapons.filter((w) => w.def.id === id).sort((a, b) => b.rank - a.rank);
+    if (copies.length < 2) return false;
+    const keep = copies[0]!;
+    const extra = copies[1]!;
+    if (keep.rank >= MAX_WEAPON_RANK) return false;
+    keep.rank += 1;
+    this.weapons.splice(this.weapons.indexOf(extra), 1);
+    this.sound.shop();
+    return true;
+  };
+
   private gameOver(): void {
     this.state = 'gameover';
     this.sound.death();
@@ -200,10 +265,16 @@ export class Game {
   }
 
   private openShop(): void {
+    this.vacuumMats();
     this.state = 'shop';
     this.sound.shop();
     this.hud.showBanner('TEÇHİZAT', 'DALGA BİTTİ', 1.1);
-    this.shop.show(this.player, this.weapons, this.spawner.wave, this.addWeapon);
+    this.shop.show(this.player, this.weapons, this.spawner.wave, this.addWeapon, this.mergeWeapon);
+  }
+
+  private vacuumMats(): void {
+    const grabbed = this.drops.collectAll(this.player);
+    if (grabbed > 0) this.sound.pickup();
   }
 
   private simulate(dt: number): void {
@@ -214,8 +285,11 @@ export class Game {
     this.orbit += PLAYER.orbitSpeed * dt;
 
     this.spawner.update(dt, this.enemies, this.player, this.camera);
+    if (this.state === 'playing') this.crystals.maybeSpawn(dt, this.player, this.camera);
+    this.crystals.update(dt);
 
     const living = this.enemies.living();
+    const hunts = [...living, ...this.crystals.living()];
     for (const enemy of this.enemies.items) enemy.update(dt, this.player);
 
     this.separateEnemies(living);
@@ -223,7 +297,7 @@ export class Game {
     for (let i = 0; i < this.weapons.length; i += 1) {
       const weapon = this.weapons[i]!;
       weapon.update(dt, this.player.x, this.player.y, this.orbit, i, this.weapons.length);
-      const target = weapon.nearest(living);
+      const target = weapon.nearest(hunts);
       if (target) {
         weapon.aim = Math.atan2(target.y - weapon.y, target.x - weapon.x);
         if (weapon.tryFire(this.projectiles, target, this.player.damageMul)) {
@@ -234,6 +308,7 @@ export class Game {
 
     this.projectiles.update(dt);
     this.collideProjectiles(living);
+    this.collideCrystals();
     this.collidePlayer(living);
 
     const grabbed = this.drops.update(dt, this.player);
@@ -242,11 +317,10 @@ export class Game {
     this.particles.update(dt);
 
     if (this.state === 'playing' && !this.spawner.spawning) {
-      this.state = 'clearing';
-      this.hud.showBanner('SÜRE DOLDU', 'KALANLARI TEMİZLE', 1.6);
+      this.finishWave();
     }
 
-    if (this.state === 'clearing' && this.enemies.count() === 0) {
+    if (this.state === 'clearing') {
       if (this.shopDelay === 0) {
         this.savedMagnet = this.player.magnetRange;
         this.savedPickup = this.player.pickupRange;
@@ -254,10 +328,26 @@ export class Game {
       this.player.magnetRange = 1400;
       this.player.pickupRange = 120;
       this.shopDelay += dt;
-      if (this.shopDelay > 0.7) this.openShop();
+      if (this.shopDelay > 0.85 || this.drops.count() === 0) this.openShop();
     }
 
     if (!this.player.alive) this.gameOver();
+  }
+
+  private finishWave(): void {
+    for (const crystal of this.crystals.items) {
+      if (crystal.alive) this.popCrystal(crystal);
+    }
+    for (const enemy of this.enemies.items) {
+      if (!enemy.alive) continue;
+      this.drops.spawn(enemy.x, enemy.y, enemy.xp);
+      this.particles.burst(enemy.x, enemy.y, enemy.color, 10, 140);
+      enemy.alive = false;
+    }
+    this.projectiles.clear();
+    this.player.magnetPulse = Math.max(this.player.magnetPulse, 1.1);
+    this.state = 'clearing';
+    this.hud.showBanner('DALGA BİTTİ', 'MAT TOPLANIYOR', 1.2);
   }
 
   private separateEnemies(living: ReturnType<EnemyPool['living']>): void {
@@ -306,6 +396,44 @@ export class Game {
     }
   }
 
+  private collideCrystals(): void {
+    for (const shot of this.projectiles.items) {
+      if (!shot.alive) continue;
+      for (const crystal of this.crystals.items) {
+        if (!crystal.alive || shot.hitIds.has(crystal.id)) continue;
+        const r = shot.radius + crystal.radius;
+        if (distSq(shot.x, shot.y, crystal.x, crystal.y) > r * r) continue;
+        shot.hitIds.add(crystal.id);
+        const popped = crystal.hurt(shot.damage);
+        this.particles.burst(shot.x, shot.y, '#7dffc8', 6, 100);
+        this.sound.hit();
+        if (popped) this.popCrystal(crystal);
+        shot.pierce -= 1;
+        if (shot.pierce < 0) {
+          shot.alive = false;
+          break;
+        }
+      }
+    }
+  }
+
+  private popCrystal(crystal: Crystal): void {
+    crystal.alive = false;
+    const payout = CRYSTAL.shards * CRYSTAL.shardValue;
+    for (let i = 0; i < CRYSTAL.shards; i += 1) {
+      const a = (i / CRYSTAL.shards) * Math.PI * 2;
+      this.drops.spawn(
+        crystal.x + Math.cos(a) * 18,
+        crystal.y + Math.sin(a) * 18,
+        CRYSTAL.shardValue,
+      );
+    }
+    this.particles.burst(crystal.x, crystal.y, '#2dffb4', 22, 220);
+    this.particles.float(crystal.x, crystal.y - 16, `+${payout}`, '#7dffc8');
+    this.player.magnetPulse = Math.max(this.player.magnetPulse, 0.55);
+    this.camera.bump(8);
+  }
+
   private collidePlayer(living: ReturnType<EnemyPool['living']>): void {
     for (const enemy of living) {
       if (!enemy.alive) continue;
@@ -333,17 +461,18 @@ export class Game {
   private render(): void {
     const ctx = this.ctx;
     ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
-    ctx.fillStyle = '#12160f';
+    ctx.fillStyle = this.arena.theme.clear;
     ctx.fillRect(0, 0, this.viewW, this.viewH);
 
     ctx.save();
     this.camera.apply(ctx);
     this.arena.draw(ctx, this.camera, this.assets);
     this.drops.draw(ctx, this.assets);
+    this.crystals.draw(ctx);
     for (const enemy of this.enemies.items) enemy.draw(ctx, this.assets);
     this.projectiles.draw(ctx, this.assets);
-    if (this.state !== 'menu') this.player.draw(ctx, this.assets);
-    if (this.state !== 'menu') {
+    if (this.inRun()) this.player.draw(ctx, this.assets);
+    if (this.inRun()) {
       for (const weapon of this.weapons) weapon.draw(ctx);
     }
     this.particles.draw(ctx);
@@ -369,7 +498,7 @@ export class Game {
     const dt = Math.min(0.05, (now - this.last) / 1000);
     this.last = now;
 
-    if (this.state !== 'paused' && this.state !== 'shop' && this.state !== 'menu') {
+    if (this.state !== 'paused' && this.state !== 'shop' && this.inRun()) {
       this.simulate(dt);
     }
     if (this.state === 'shop') this.particles.update(dt);
@@ -377,7 +506,7 @@ export class Game {
     this.camera.follow(this.player.x, this.player.y, dt);
     this.render();
 
-    if (this.state !== 'menu') {
+    if (this.inRun() || this.state === 'shop' || this.state === 'paused') {
       this.hud.update(
         dt,
         this.player,

@@ -10,25 +10,57 @@ export class Spawner {
   timer = 0;
   acc = 0;
   spawning = false;
+  bossSpawned = false;
+
+  isBossWave(): boolean {
+    return this.wave > 0 && this.wave % WAVE.bossEvery === 0;
+  }
 
   startWave(wave: number): void {
     this.wave = wave;
-    this.timer = WAVE.duration;
+    this.timer = this.isBossWave() ? WAVE.duration + 10 : WAVE.duration;
     this.acc = 0.85;
     this.spawning = true;
+    this.bossSpawned = false;
   }
 
   interval(): number {
-    return Math.max(0.22, 0.78 - (this.wave - 1) * 0.06);
+    const hard = 0.78 / WAVE.difficulty;
+    return Math.max(0.18, hard - (this.wave - 1) * 0.06);
   }
 
   pickKind(): EnemyKind {
     const w = this.wave;
-    const roll = Math.random();
-    if (w >= 6 && roll < 0.16) return 'tank';
-    if (w >= 3 && roll < 0.42) return 'runner';
-    if (w >= 8 && roll < 0.28) return 'tank';
+    const bag: { kind: EnemyKind; n: number }[] = [{ kind: 'walker', n: 8 }];
+    if (w >= 2) bag.push({ kind: 'runner', n: 5 });
+    if (w >= 3) bag.push({ kind: 'beetle', n: 4 });
+    if (w >= 4) bag.push({ kind: 'wasp', n: 4 });
+    if (w >= 5) bag.push({ kind: 'tank', n: 3 });
+    if (w >= 7) bag.push({ kind: 'spitter', n: 3 });
+    if (w >= 8) {
+      bag.push({ kind: 'tank', n: 3 });
+      bag.push({ kind: 'wasp', n: 3 });
+    }
+    let total = 0;
+    for (const item of bag) total += item.n;
+    let roll = Math.random() * total;
+    for (const item of bag) {
+      roll -= item.n;
+      if (roll <= 0) return item.kind;
+    }
     return 'walker';
+  }
+
+  introLine(): string {
+    const w = this.wave;
+    if (this.isBossWave()) return 'PATRON GELİYOR';
+    if (w > 1 && (w - 1) % WAVE.bossEvery === 0) return 'YENİ KOVA';
+    if (w <= 1) return 'LARVALAR UYANDI';
+    if (w === 2) return 'SIÇRAYANLAR KARIŞTI';
+    if (w === 3) return 'KABUKLU BÖCEKLER';
+    if (w === 4) return 'EŞEKARILARI';
+    if (w === 6) return 'KARIŞIK SÜRÜ';
+    return 'TÜKÜRENLER DE VAR';
   }
 
   spawnPoint(player: Player, camera: Camera): { x: number; y: number } {
@@ -58,8 +90,17 @@ export class Spawner {
       this.spawning = false;
       return;
     }
+
+    if (this.isBossWave() && !this.bossSpawned) {
+      const p = this.spawnPoint(player, camera);
+      enemies.spawn('boss', p.x, p.y, this.wave);
+      this.bossSpawned = true;
+    }
+
     this.acc += dt;
-    const cap = Math.min(WAVE.maxAlive, 10 + this.wave * 4);
+    const cap = this.isBossWave()
+      ? Math.min(WAVE.maxAlive, 8 + this.wave * 2)
+      : Math.min(WAVE.maxAlive, Math.round((10 + this.wave * 4) * WAVE.difficulty));
     while (this.acc >= this.interval() && enemies.count() < cap) {
       this.acc -= this.interval();
       const p = this.spawnPoint(player, camera);

@@ -1,13 +1,24 @@
-export type GameState = 'menu' | 'playing' | 'clearing' | 'shop' | 'paused' | 'gameover';
+export type GameState =
+  | 'menu'
+  | 'hero'
+  | 'loadout'
+  | 'playing'
+  | 'clearing'
+  | 'shop'
+  | 'paused'
+  | 'gameover';
 
-export interface Vec2 {
+export interface HuntTarget {
+  alive: boolean;
   x: number;
   y: number;
 }
 
-export type EnemyKind = 'walker' | 'runner' | 'tank';
+export type EnemyKind = 'walker' | 'runner' | 'beetle' | 'wasp' | 'tank' | 'spitter' | 'boss';
 
 export type WeaponId = 'pistol' | 'smg' | 'shotgun' | 'sniper' | 'plasma' | 'minigun';
+
+export type HeroId = 'kurtcuk' | 'kabuk' | 'isik' | 'suru';
 
 export interface WeaponDef {
   id: WeaponId;
@@ -36,6 +47,32 @@ export interface EnemyDef {
   color: string;
   eye: string;
   spriteSize: number;
+}
+
+export interface HeroDef {
+  id: HeroId;
+  name: string;
+  blurb: string;
+  maxHp: number;
+  speed: number;
+  armor: number;
+  damageMul: number;
+  pickupRange: number;
+  magnetRange: number;
+  body: string;
+  shell: string;
+  skin: string;
+  eye: string;
+  accent: string;
+}
+
+export interface ArenaTheme {
+  name: string;
+  clear: string;
+  floor: [number, number, number];
+  accent: string;
+  wall: string;
+  wallInner: string;
 }
 
 export interface ShopOffer {

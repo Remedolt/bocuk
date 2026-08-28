@@ -678,8 +678,105 @@ a.btn-ghost {
   border-color: #7dff9a;
 }
 
+.overlay.loadout {
+  z-index: 13;
+  background:
+    radial-gradient(circle at 18% 80%, rgba(200, 255, 61, 0.12), transparent 42%),
+    radial-gradient(circle at 88% 12%, rgba(255, 61, 127, 0.18), transparent 36%),
+    rgba(10, 6, 4, 0.88);
+}
+
+.loadout-panel {
+  width: min(920px, calc(100% - 32px));
+  padding: 28px 26px 22px;
+  text-align: center;
+  background: rgba(16, 10, 8, 0.94);
+  border: 4px solid #000;
+  box-shadow: 12px 12px 0 var(--green);
+}
+
+.loadout-panel h2 {
+  margin: 4px 0 0;
+  font-family: var(--font-display);
+  font-size: clamp(28px, 5vw, 44px);
+  letter-spacing: 0.06em;
+  color: var(--green);
+  text-shadow: 4px 4px 0 #000;
+}
+
+.loadout-sub {
+  margin: 8px 0 20px;
+  color: var(--gold);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.loadout-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.hero-grid {
+  grid-template-columns: 1fr 1fr;
+}
+
+.hero-art {
+  height: 110px;
+}
+
+.arm-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding: 10px 10px 14px;
+  cursor: pointer;
+  letter-spacing: 0;
+  font-size: 13px;
+  color: var(--ice);
+  background: rgba(255, 255, 255, 0.04);
+  border: 3px solid #000;
+  box-shadow: 5px 5px 0 #000;
+  border-radius: 16px;
+}
+
+.arm-card:hover {
+  background: color-mix(in srgb, var(--tint, var(--green)) 22%, rgba(20, 12, 8, 0.9));
+  transform: translate(-2px, -2px);
+  box-shadow: 7px 7px 0 #000;
+}
+
+.arm-art {
+  width: 100%;
+  height: 92px;
+  display: block;
+  pointer-events: none;
+  background: radial-gradient(circle at 50% 60%, rgba(255, 255, 255, 0.06), transparent 62%);
+}
+
+.arm-name {
+  font-weight: 900;
+  color: var(--tint, var(--green));
+}
+
+.arm-blurb {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.loadout-back {
+  margin-top: 18px;
+  width: min(220px, 100%);
+}
+
 @media (max-width: 860px) {
   .offer-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .loadout-grid {
     grid-template-columns: 1fr 1fr;
   }
 }
