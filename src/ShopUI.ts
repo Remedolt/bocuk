@@ -122,13 +122,13 @@ export class ShopUI {
       },
       {
         id: 'mag',
-        title: '+30 Toplama',
-        desc: 'XP küreleri daha uzaktan çekilir',
+        title: '+36 Mıknatıs',
+        desc: 'Matları daha uzaktan çeker',
         cost: this.scale(10),
         tint: '#4dff88',
         apply: () => {
-          p.pickupRange += 12;
-          p.magnetRange += 30;
+          p.pickupRange += 14;
+          p.magnetRange += 36;
           return true;
         },
       },

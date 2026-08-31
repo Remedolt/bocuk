@@ -26,29 +26,24 @@ export class DropItem {
   update(dt: number, player: Player): boolean {
     if (!this.alive) return false;
     this.bob += dt * 6;
+    this.vx *= 0.9;
+    this.vy *= 0.9;
     const dx = player.x - this.x;
     const dy = player.y - this.y;
     const d2 = dx * dx + dy * dy;
-    const pulsing = player.magnetPulse > 0;
-    const magnet = pulsing ? 2200 : player.magnetRange;
+    const magnet = player.magnetRange;
     if (d2 < magnet * magnet && d2 > 1) {
       const d = Math.sqrt(d2);
-      const pull = pulsing ? 1650 : 980 * (1 - d / magnet * 0.35);
+      const pull = 520 * (1 - d / magnet);
       this.vx += (dx / d) * pull * dt;
       this.vy += (dy / d) * pull * dt;
-      const rush = pulsing ? 520 : 220;
-      this.x += (dx / d) * rush * dt;
-      this.y += (dy / d) * rush * dt;
     }
-    this.vx *= pulsing ? 0.78 : 0.84;
-    this.vy *= pulsing ? 0.78 : 0.84;
     this.x += this.vx * dt;
     this.y += this.vy * dt;
     if (distSq(this.x, this.y, player.x, player.y) < player.pickupRange * player.pickupRange) {
       this.alive = false;
       player.materials += this.value;
       player.xp += this.value;
-      player.magnetPulse = Math.max(player.magnetPulse, 0.72);
       return true;
     }
     return false;

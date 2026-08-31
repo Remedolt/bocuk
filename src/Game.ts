@@ -5,6 +5,7 @@ import { Assets } from './Assets';
 import { Camera } from './Camera';
 import { Crystal, CrystalPool } from './Crystal';
 import { DropPool } from './DropItem';
+import { EnemyBoltPool } from './EnemyBolt';
 import { EnemyPool } from './Enemy';
 import { HeroUI } from './HeroUI';
 import { Hud } from './Hud';
@@ -36,6 +37,7 @@ export class Game {
   private player = new Player();
   private weapons: Weapon[] = [];
   private projectiles = new ProjectilePool();
+  private bolts = new EnemyBoltPool();
   private enemies = new EnemyPool();
   private drops = new DropPool();
   private crystals = new CrystalPool();
@@ -47,8 +49,6 @@ export class Game {
   private loadout = new LoadoutUI();
   private orbit = 0;
   private shopDelay = 0;
-  private savedMagnet = PLAYER.magnetRange;
-  private savedPickup = PLAYER.pickupRange;
   private pickedHero: HeroId = 'kurtcuk';
 
   async init(): Promise<void> {
@@ -147,10 +147,9 @@ export class Game {
     this.sound.wave();
     void this.ensureFullscreen();
     this.player.reset(HERO_DEFS[this.pickedHero]);
-    this.savedMagnet = this.player.magnetRange;
-    this.savedPickup = this.player.pickupRange;
     this.weapons = [new Weapon(WEAPON_DEFS[weaponId])];
     this.projectiles.clear();
+    this.bolts.clear();
     this.enemies.clear();
     this.drops.clear();
     this.crystals.clear();
@@ -162,21 +161,19 @@ export class Game {
     this.arena.setWave(1);
     this.spawner.startWave(1);
     this.state = 'playing';
-    this.hud.showBanner('DALGA 1', this.spawner.introLine());
+    this.hud.showBanner('BÖLÜM 1', this.spawner.introLine());
   }
 
   private nextWave(): void {
-    this.player.magnetRange = this.savedMagnet;
-    this.player.pickupRange = this.savedPickup;
     this.enemies.clear();
     this.projectiles.clear();
-    this.crystals.clear();
+    this.bolts.clear();
     this.shopDelay = 0;
     this.spawner.startWave(this.spawner.wave + 1);
     this.arena.setWave(this.spawner.wave);
     this.state = 'playing';
     this.sound.wave();
-    const title = this.spawner.isBossWave() ? 'PATRON' : `DALGA ${this.spawner.wave}`;
+    const title = this.spawner.isBossWave() ? 'PATRON' : `BÖLÜM ${this.spawner.wave}`;
     this.hud.showBanner(title, this.spawner.introLine(), this.spawner.isBossWave() ? 2.4 : 1.8);
   }
 
@@ -265,16 +262,10 @@ export class Game {
   }
 
   private openShop(): void {
-    this.vacuumMats();
     this.state = 'shop';
     this.sound.shop();
-    this.hud.showBanner('TEÇHİZAT', 'DALGA BİTTİ', 1.1);
+    this.hud.showBanner('TEÇHİZAT', 'BÖLÜM BİTTİ', 1.1);
     this.shop.show(this.player, this.weapons, this.spawner.wave, this.addWeapon, this.mergeWeapon);
-  }
-
-  private vacuumMats(): void {
-    const grabbed = this.drops.collectAll(this.player);
-    if (grabbed > 0) this.sound.pickup();
   }
 
   private simulate(dt: number): void {
@@ -290,7 +281,10 @@ export class Game {
 
     const living = this.enemies.living();
     const hunts = [...living, ...this.crystals.living()];
-    for (const enemy of this.enemies.items) enemy.update(dt, this.player);
+    for (const enemy of this.enemies.items) {
+      enemy.update(dt, this.player);
+      if (this.state === 'playing') enemy.tryShoot(this.bolts, this.player);
+    }
 
     this.separateEnemies(living);
 
@@ -307,8 +301,10 @@ export class Game {
     }
 
     this.projectiles.update(dt);
+    this.bolts.update(dt);
     this.collideProjectiles(living);
     this.collideCrystals();
+    this.collideBolts();
     this.collidePlayer(living);
 
     const grabbed = this.drops.update(dt, this.player);
@@ -316,28 +312,25 @@ export class Game {
 
     this.particles.update(dt);
 
-    if (this.state === 'playing' && !this.spawner.spawning) {
-      this.finishWave();
+    if (this.state === 'playing') {
+      if (this.spawner.isBossWave()) {
+        const bossAlive = this.enemies.items.some((e) => e.alive && e.kind === 'boss');
+        if (this.spawner.bossSpawned && !bossAlive) this.finishWave();
+      } else if (!this.spawner.spawning) {
+        this.finishWave();
+      }
     }
 
     if (this.state === 'clearing') {
-      if (this.shopDelay === 0) {
-        this.savedMagnet = this.player.magnetRange;
-        this.savedPickup = this.player.pickupRange;
-      }
-      this.player.magnetRange = 1400;
-      this.player.pickupRange = 120;
       this.shopDelay += dt;
-      if (this.shopDelay > 0.85 || this.drops.count() === 0) this.openShop();
+      if (this.shopDelay > 0.55) this.openShop();
     }
 
     if (!this.player.alive) this.gameOver();
   }
 
   private finishWave(): void {
-    for (const crystal of this.crystals.items) {
-      if (crystal.alive) this.popCrystal(crystal);
-    }
+    if (this.state === 'clearing' || this.state === 'shop') return;
     for (const enemy of this.enemies.items) {
       if (!enemy.alive) continue;
       this.drops.spawn(enemy.x, enemy.y, enemy.xp);
@@ -345,9 +338,10 @@ export class Game {
       enemy.alive = false;
     }
     this.projectiles.clear();
-    this.player.magnetPulse = Math.max(this.player.magnetPulse, 1.1);
+    this.bolts.clear();
     this.state = 'clearing';
-    this.hud.showBanner('DALGA BİTTİ', 'MAT TOPLANIYOR', 1.2);
+    this.shopDelay = 0;
+    this.hud.showBanner('BÖLÜM BİTTİ', this.spawner.isBossWave() ? 'PATRON DÜŞTÜ' : '', 1.2);
   }
 
   private separateEnemies(living: ReturnType<EnemyPool['living']>): void {
@@ -386,6 +380,7 @@ export class Game {
           this.drops.spawn(enemy.x, enemy.y, result.xp);
           this.particles.burst(enemy.x, enemy.y, enemy.color, 14, 160);
           this.particles.float(enemy.x, enemy.y - 12, `+${result.xp}`, '#7dff9a');
+          if (enemy.kind === 'boss') this.finishWave();
         }
         shot.pierce -= 1;
         if (shot.pierce < 0) {
@@ -430,8 +425,22 @@ export class Game {
     }
     this.particles.burst(crystal.x, crystal.y, '#2dffb4', 22, 220);
     this.particles.float(crystal.x, crystal.y - 16, `+${payout}`, '#7dffc8');
-    this.player.magnetPulse = Math.max(this.player.magnetPulse, 0.55);
     this.camera.bump(8);
+  }
+
+  private collideBolts(): void {
+    for (const bolt of this.bolts.items) {
+      if (!bolt.alive) continue;
+      const r = bolt.radius + this.player.radius;
+      if (distSq(bolt.x, bolt.y, this.player.x, this.player.y) > r * r) continue;
+      bolt.alive = false;
+      const tint = bolt.kind === 'fire' ? '#ff7a2a' : bolt.kind === 'acid' ? '#c8ff3d' : '#c46aff';
+      this.particles.burst(bolt.x, bolt.y, tint, 8, 110);
+      const dead = this.player.takeDamage(bolt.damage);
+      this.camera.bump(8);
+      this.sound.hurt();
+      if (dead) return;
+    }
   }
 
   private collidePlayer(living: ReturnType<EnemyPool['living']>): void {
@@ -449,7 +458,7 @@ export class Game {
       enemy.x -= dx * push * 0.65;
       enemy.y -= dy * push * 0.65;
       if (enemy.attackCd <= 0) {
-        enemy.attackCd = 0.7;
+        enemy.attackCd = enemy.kind === 'boss' ? 0.32 : 0.7;
         const dead = this.player.takeDamage(enemy.damage);
         this.camera.bump(10);
         this.sound.hurt();
@@ -471,6 +480,7 @@ export class Game {
     this.crystals.draw(ctx);
     for (const enemy of this.enemies.items) enemy.draw(ctx, this.assets);
     this.projectiles.draw(ctx, this.assets);
+    this.bolts.draw(ctx);
     if (this.inRun()) this.player.draw(ctx, this.assets);
     if (this.inRun()) {
       for (const weapon of this.weapons) weapon.draw(ctx);

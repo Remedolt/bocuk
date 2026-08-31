@@ -77,6 +77,9 @@ export class Hud {
     if (clearing) {
       this.timer.textContent = 'BİTTİ';
       this.timer.classList.add('warn');
+    } else if (spawner.isBossWave() && !spawner.spawning) {
+      this.timer.textContent = 'PATRON';
+      this.timer.classList.add('warn');
     } else {
       const t = Math.max(0, Math.ceil(spawner.timer));
       const m = Math.floor(t / 60);

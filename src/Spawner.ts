@@ -34,9 +34,9 @@ export class Spawner {
     const bag: { kind: EnemyKind; n: number }[] = [{ kind: 'walker', n: 8 }];
     if (w >= 2) bag.push({ kind: 'runner', n: 5 });
     if (w >= 3) bag.push({ kind: 'beetle', n: 4 });
+    if (w >= 3) bag.push({ kind: 'spitter', n: 3 });
     if (w >= 4) bag.push({ kind: 'wasp', n: 4 });
     if (w >= 5) bag.push({ kind: 'tank', n: 3 });
-    if (w >= 7) bag.push({ kind: 'spitter', n: 3 });
     if (w >= 8) {
       bag.push({ kind: 'tank', n: 3 });
       bag.push({ kind: 'wasp', n: 3 });

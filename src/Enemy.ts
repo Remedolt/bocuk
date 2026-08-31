@@ -2,6 +2,7 @@ import { ARENA, ENEMY_DEFS, WAVE } from './constants';
 import { drawShadow, drawSprite } from './draw';
 import { clamp } from './math';
 import type { Assets } from './Assets';
+import type { EnemyBoltPool } from './EnemyBolt';
 import type { EnemyKind } from './types';
 import type { Player } from './Player';
 
@@ -26,6 +27,10 @@ export class Enemy {
   attackCd = 0;
   hitFlash = 0;
   walk = 0;
+  wave = 1;
+  shotCd = 0;
+  dashT = 0;
+  dashCd = 0;
 
   spawn(kind: EnemyKind, x: number, y: number, wave: number): void {
     const def = ENEMY_DEFS[kind];
@@ -49,6 +54,10 @@ export class Enemy {
     this.attackCd = 0;
     this.hitFlash = 0;
     this.walk = Math.random() * Math.PI * 2;
+    this.wave = wave;
+    this.shotCd = 0.4 + Math.random() * 0.8;
+    this.dashT = 0;
+    this.dashCd = 0.6;
   }
 
   update(dt: number, player: Player): void {
@@ -57,14 +66,73 @@ export class Enemy {
     const dy = player.y - this.y;
     const len = Math.hypot(dx, dy) || 1;
     this.angle = Math.atan2(dy, dx);
-    this.x += (dx / len) * this.speed * dt;
-    this.y += (dy / len) * this.speed * dt;
+    let spd = this.speed;
+    if (this.kind === 'boss') {
+      this.dashCd = Math.max(0, this.dashCd - dt);
+      if (this.dashT > 0) {
+        this.dashT -= dt;
+        spd *= 3.6;
+      } else if (this.dashCd <= 0 && len > 90) {
+        this.dashT = 0.38;
+        this.dashCd = 1.35;
+      }
+    }
+    this.x += (dx / len) * spd * dt;
+    this.y += (dy / len) * spd * dt;
     const limit = ARENA.size / 2 - this.radius;
     this.x = clamp(this.x, -limit, limit);
     this.y = clamp(this.y, -limit, limit);
     this.attackCd = Math.max(0, this.attackCd - dt);
     this.hitFlash = Math.max(0, this.hitFlash - dt);
-    this.walk += dt * 10;
+    this.shotCd = Math.max(0, this.shotCd - dt);
+    this.walk += dt * (this.kind === 'boss' ? 14 : 10);
+  }
+
+  tryShoot(bolts: EnemyBoltPool, player: Player): void {
+    if (!this.alive || this.shotCd > 0) return;
+    const dx = player.x - this.x;
+    const dy = player.y - this.y;
+    const dist = Math.hypot(dx, dy);
+    const ang = Math.atan2(dy, dx);
+    const dmg = Math.max(4, Math.round(this.damage * 0.55));
+
+    if (this.kind === 'boss') {
+      if (dist > 560) return;
+      this.shotCd = 0.82;
+      for (const spread of [-0.34, 0, 0.34]) {
+        bolts.spawn(this.x, this.y, ang + spread, 'fire', dmg, 320);
+      }
+      return;
+    }
+    if (this.kind === 'spitter' && this.wave >= 3) {
+      if (dist > 420 || dist < 50) return;
+      this.shotCd = 1.25;
+      bolts.spawn(this.x, this.y, ang, 'spit', dmg, 240);
+      return;
+    }
+    if (this.kind === 'wasp' && this.wave >= 4) {
+      if (dist > 380 || dist < 40) return;
+      this.shotCd = 1.45;
+      bolts.spawn(this.x, this.y, ang, 'acid', Math.round(dmg * 0.85), 300);
+      return;
+    }
+    if (this.kind === 'beetle' && this.wave >= 5) {
+      if (dist > 340 || dist < 60) return;
+      this.shotCd = 1.9;
+      bolts.spawn(this.x, this.y, ang, 'fire', dmg, 220);
+      return;
+    }
+    if (this.kind === 'tank' && this.wave >= 5) {
+      if (dist > 400 || dist < 70) return;
+      this.shotCd = 1.7;
+      bolts.spawn(this.x, this.y, ang, 'fire', Math.round(dmg * 1.1), 200);
+      return;
+    }
+    if (this.kind === 'walker' && this.wave >= 8) {
+      if (dist > 280 || dist < 50) return;
+      this.shotCd = 2.4;
+      bolts.spawn(this.x, this.y, ang, 'spit', Math.round(dmg * 0.7), 200);
+    }
   }
 
   hurt(amount: number): { killed: boolean; xp: number } {
