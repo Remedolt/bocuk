@@ -168,6 +168,7 @@ export class Game {
     this.enemies.clear();
     this.projectiles.clear();
     this.bolts.clear();
+    this.drops.clear();
     this.shopDelay = 0;
     this.spawner.startWave(this.spawner.wave + 1);
     this.arena.setWave(this.spawner.wave);
@@ -262,6 +263,7 @@ export class Game {
   }
 
   private openShop(): void {
+    this.drops.clear();
     this.state = 'shop';
     this.sound.shop();
     this.hud.showBanner('TEÇHİZAT', 'BÖLÜM BİTTİ', 1.1);
