@@ -42,22 +42,20 @@ export class EnemyBolt {
     ctx.translate(this.x, this.y);
     ctx.rotate(this.angle);
     if (this.kind === 'fire') {
-      const g = ctx.createRadialGradient(0, 0, 1, 0, 0, 9);
-      g.addColorStop(0, '#fff4d0');
-      g.addColorStop(0.35, '#ff7a2a');
-      g.addColorStop(1, 'rgba(80, 10, 0, 0)');
-      ctx.fillStyle = g;
+      ctx.fillStyle = '#ff7a2a';
       ctx.beginPath();
-      ctx.arc(0, 0, 9, 0, Math.PI * 2);
+      ctx.arc(0, 0, 7, 0, Math.PI * 2);
       ctx.fill();
       ctx.fillStyle = '#ffe14a';
       ctx.beginPath();
-      ctx.ellipse(-6, 0, 8, 3.2, 0, 0, Math.PI * 2);
+      ctx.ellipse(-5, 0, 7, 2.8, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#fff4d0';
+      ctx.beginPath();
+      ctx.arc(1, 0, 2.4, 0, Math.PI * 2);
       ctx.fill();
     } else if (this.kind === 'acid') {
       ctx.fillStyle = '#c8ff3d';
-      ctx.shadowColor = '#7dff3a';
-      ctx.shadowBlur = 10;
       ctx.beginPath();
       ctx.arc(0, 0, 5.5, 0, Math.PI * 2);
       ctx.fill();
@@ -67,8 +65,6 @@ export class EnemyBolt {
       ctx.fill();
     } else {
       ctx.fillStyle = '#c46aff';
-      ctx.shadowColor = '#8a4aaa';
-      ctx.shadowBlur = 12;
       ctx.beginPath();
       ctx.ellipse(0, 0, 8, 5.5, 0, 0, Math.PI * 2);
       ctx.fill();

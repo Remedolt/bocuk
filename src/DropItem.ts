@@ -52,24 +52,20 @@ export class DropItem {
   draw(ctx: CanvasRenderingContext2D, assets: Assets): void {
     if (!this.alive) return;
     const y = this.y + Math.sin(this.bob) * 3;
-    ctx.save();
-    ctx.shadowColor = '#3dff7a';
-    ctx.shadowBlur = 12;
     drawSprite(ctx, assets.get('xp'), this.x, y, 16, 16, SPRITE_UP, () => {
-      const g = ctx.createRadialGradient(0, 0, 1, 0, 0, this.radius);
-      g.addColorStop(0, '#e8ffe8');
-      g.addColorStop(0.45, '#4dff88');
-      g.addColorStop(1, '#0b6b32');
-      ctx.fillStyle = g;
+      ctx.fillStyle = '#0b6b32';
       ctx.beginPath();
       ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = 'rgba(255,255,255,0.7)';
+      ctx.fillStyle = '#4dff88';
+      ctx.beginPath();
+      ctx.arc(0, 0, this.radius * 0.62, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,0.75)';
       ctx.beginPath();
       ctx.arc(-2, -2.4, 2, 0, Math.PI * 2);
       ctx.fill();
     });
-    ctx.restore();
   }
 }
 

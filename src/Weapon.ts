@@ -79,8 +79,10 @@ export class Weapon {
     ctx.ellipse(2, 8, 10, 4, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    ctx.shadowColor = this.def.glow;
-    ctx.shadowBlur = this.flash > 0 ? 8 : 3;
+    if (this.flash > 0) {
+      ctx.shadowColor = this.def.glow;
+      ctx.shadowBlur = 6;
+    }
     this.drawBody(ctx);
     ctx.shadowBlur = 0;
 

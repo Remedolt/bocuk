@@ -56,16 +56,15 @@ export class Projectile {
   private drawRound(ctx: CanvasRenderingContext2D): void {
     if (this.kind === 'plasma') {
       const r = Math.max(7, this.radius);
-      const g = ctx.createRadialGradient(0, 0, 1, 0, 0, r);
-      g.addColorStop(0, '#f4fff8');
-      g.addColorStop(0.35, '#2dffb4');
-      g.addColorStop(0.75, 'rgba(20, 140, 100, 0.55)');
-      g.addColorStop(1, 'rgba(10, 80, 60, 0)');
-      ctx.fillStyle = g;
+      ctx.fillStyle = 'rgba(20, 140, 100, 0.35)';
       ctx.beginPath();
-      ctx.arc(0, 0, r, 0, Math.PI * 2);
+      ctx.arc(0, 0, r * 1.15, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = 'rgba(255,255,255,0.85)';
+      ctx.fillStyle = '#2dffb4';
+      ctx.beginPath();
+      ctx.arc(0, 0, r * 0.72, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#f4fff8';
       ctx.beginPath();
       ctx.arc(-r * 0.18, -r * 0.18, r * 0.22, 0, Math.PI * 2);
       ctx.fill();
@@ -78,17 +77,14 @@ export class Projectile {
       ctx.beginPath();
       ctx.ellipse(-r * 0.35, r * 0.4, r * 1.05, r * 0.5, 0, 0, Math.PI * 2);
       ctx.fill();
-      const g = ctx.createRadialGradient(-r * 0.35, -r * 0.4, 0.2, 0, 0, r);
-      g.addColorStop(0, '#ece8e0');
-      g.addColorStop(0.4, '#9a9690');
-      g.addColorStop(1, '#3c3a36');
-      ctx.fillStyle = g;
+      ctx.fillStyle = '#9a9690';
       ctx.beginPath();
       ctx.arc(0, 0, r, 0, Math.PI * 2);
       ctx.fill();
-      ctx.strokeStyle = 'rgba(20,16,12,0.55)';
-      ctx.lineWidth = 0.6;
-      ctx.stroke();
+      ctx.fillStyle = '#ece8e0';
+      ctx.beginPath();
+      ctx.arc(-r * 0.25, -r * 0.28, r * 0.35, 0, Math.PI * 2);
+      ctx.fill();
       return;
     }
 

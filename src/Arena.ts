@@ -13,7 +13,6 @@ export class Arena {
   private floorPattern: CanvasPattern | null = null;
   private patternCtx: CanvasRenderingContext2D | null = null;
   private bakedTheme = '';
-  private bakedFloorKey = '';
 
   setWave(wave: number): void {
     this.theme = ARENA_THEMES[themeIndexForWave(wave)]!;
@@ -109,7 +108,6 @@ export class Arena {
     this.bakedTheme = key;
     this.floorPattern = null;
     this.patternCtx = null;
-    this.bakedFloorKey = key;
   }
 
   private patternFor(ctx: CanvasRenderingContext2D): CanvasPattern | null {
@@ -172,6 +170,5 @@ export class Arena {
     }
 
     ctx.restore();
-    void this.bakedFloorKey;
   }
 }

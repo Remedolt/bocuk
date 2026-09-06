@@ -18,7 +18,7 @@ import { ShopUI } from './ShopUI';
 import { Sound } from './Sound';
 import { Spawner } from './Spawner';
 import { Weapon } from './Weapon';
-import type { GameState, HeroId, WeaponId } from './types';
+import type { GameState, HeroId, HuntTarget, WeaponId } from './types';
 
 export class Game {
   state: GameState = 'menu';
@@ -50,6 +50,8 @@ export class Game {
   private orbit = 0;
   private shopDelay = 0;
   private pickedHero: HeroId = 'kurtcuk';
+  private huntBuf: HuntTarget[] = [];
+  private sepSkip = 0;
 
   async init(): Promise<void> {
     this.canvas = document.getElementById('game-canvas') as HTMLCanvasElement;
@@ -100,7 +102,7 @@ export class Game {
   }
 
   private resize(): void {
-    this.dpr = Math.min(window.devicePixelRatio || 1, 2);
+    this.dpr = Math.min(window.devicePixelRatio || 1, 1.5);
     this.viewW = window.innerWidth;
     this.viewH = window.innerHeight;
     this.canvas.width = Math.floor(this.viewW * this.dpr);
@@ -108,6 +110,8 @@ export class Game {
     this.canvas.style.width = `${this.viewW}px`;
     this.canvas.style.height = `${this.viewH}px`;
     this.ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+    this.ctx.imageSmoothingEnabled = true;
+    this.ctx.imageSmoothingQuality = 'medium';
     this.camera.resize(this.viewW, this.viewH);
   }
 
@@ -282,13 +286,17 @@ export class Game {
     this.crystals.update(dt);
 
     const living = this.enemies.living();
-    const hunts = [...living, ...this.crystals.living()];
+    const hunts = this.huntBuf;
+    hunts.length = 0;
+    for (const e of living) hunts.push(e);
+    for (const c of this.crystals.living()) hunts.push(c);
     for (const enemy of this.enemies.items) {
       enemy.update(dt, this.player);
       if (this.state === 'playing') enemy.tryShoot(this.bolts, this.player);
     }
 
-    this.separateEnemies(living);
+    this.sepSkip += 1;
+    if (this.sepSkip % 2 === 0) this.separateEnemies(living);
 
     for (let i = 0; i < this.weapons.length; i += 1) {
       const weapon = this.weapons[i]!;
@@ -333,10 +341,14 @@ export class Game {
 
   private finishWave(): void {
     if (this.state === 'clearing' || this.state === 'shop') return;
+    let burstLeft = 36;
     for (const enemy of this.enemies.items) {
       if (!enemy.alive) continue;
       this.drops.spawn(enemy.x, enemy.y, enemy.xp);
-      this.particles.burst(enemy.x, enemy.y, enemy.color, 10, 140);
+      if (burstLeft > 0) {
+        this.particles.burst(enemy.x, enemy.y, enemy.color, 6, 120);
+        burstLeft -= 1;
+      }
       enemy.alive = false;
     }
     this.projectiles.clear();
@@ -478,32 +490,25 @@ export class Game {
     ctx.save();
     this.camera.apply(ctx);
     this.arena.draw(ctx, this.camera, this.assets);
-    this.drops.draw(ctx, this.assets);
-    this.crystals.draw(ctx);
-    for (const enemy of this.enemies.items) enemy.draw(ctx, this.assets);
+    for (const drop of this.drops.items) {
+      if (drop.alive && this.camera.isVisible(drop.x, drop.y, 24)) drop.draw(ctx, this.assets);
+    }
+    this.crystals.draw(ctx, this.camera);
+    for (const enemy of this.enemies.items) {
+      if (enemy.alive && this.camera.isVisible(enemy.x, enemy.y, enemy.radius + 40)) {
+        enemy.draw(ctx, this.assets);
+      }
+    }
     this.projectiles.draw(ctx, this.assets);
-    this.bolts.draw(ctx);
+    for (const bolt of this.bolts.items) {
+      if (bolt.alive && this.camera.isVisible(bolt.x, bolt.y, 20)) bolt.draw(ctx);
+    }
     if (this.inRun()) this.player.draw(ctx, this.assets);
     if (this.inRun()) {
       for (const weapon of this.weapons) weapon.draw(ctx);
     }
     this.particles.draw(ctx);
     ctx.restore();
-
-    ctx.fillStyle = 'rgba(10, 0, 0, 0.18)';
-    ctx.fillRect(0, 0, this.viewW, this.viewH);
-    const vg = ctx.createRadialGradient(
-      this.viewW / 2,
-      this.viewH / 2,
-      Math.min(this.viewW, this.viewH) * 0.28,
-      this.viewW / 2,
-      this.viewH / 2,
-      Math.hypot(this.viewW, this.viewH) * 0.55,
-    );
-    vg.addColorStop(0, 'rgba(0,0,0,0)');
-    vg.addColorStop(1, 'rgba(8, 4, 2, 0.55)');
-    ctx.fillStyle = vg;
-    ctx.fillRect(0, 0, this.viewW, this.viewH);
   }
 
   private frame(now: number): void {

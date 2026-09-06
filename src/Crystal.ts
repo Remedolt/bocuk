@@ -145,8 +145,12 @@ export class CrystalPool {
     for (const c of this.items) c.update(dt);
   }
 
-  draw(ctx: CanvasRenderingContext2D): void {
-    for (const c of this.items) c.draw(ctx);
+  draw(ctx: CanvasRenderingContext2D, camera?: Camera): void {
+    for (const c of this.items) {
+      if (!c.alive) continue;
+      if (camera && !camera.isVisible(c.x, c.y, 40)) continue;
+      c.draw(ctx);
+    }
   }
 
   clear(): void {
