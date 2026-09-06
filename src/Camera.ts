@@ -36,4 +36,11 @@ export class Camera {
   visibleRadius(): number {
     return Math.hypot(this.viewW, this.viewH) / (2 * this.zoom);
   }
+
+  /** Cheap AABB cull in world space (padding accounts for sprite size). */
+  isVisible(x: number, y: number, pad = 48): boolean {
+    const hw = this.viewW / (2 * this.zoom) + pad;
+    const hh = this.viewH / (2 * this.zoom) + pad;
+    return x > this.x - hw && x < this.x + hw && y > this.y - hh && y < this.y + hh;
+  }
 }

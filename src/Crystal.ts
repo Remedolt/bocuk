@@ -52,8 +52,6 @@ export class Crystal {
     ctx.save();
     ctx.translate(this.x, this.y);
     ctx.rotate(this.spin);
-    ctx.shadowColor = '#7dffc8';
-    ctx.shadowBlur = flash ? 22 : 14;
 
     ctx.fillStyle = 'rgba(0,0,0,0.4)';
     ctx.beginPath();
@@ -69,8 +67,8 @@ export class Crystal {
     ctx.lineTo(-11, -2);
     ctx.closePath();
     ctx.fill();
-    ctx.strokeStyle = '#0b3a28';
-    ctx.lineWidth = 2;
+    ctx.strokeStyle = flash ? '#ffffff' : '#0b3a28';
+    ctx.lineWidth = flash ? 3 : 2;
     ctx.stroke();
 
     ctx.fillStyle = '#e8fff4';
@@ -78,29 +76,36 @@ export class Crystal {
     ctx.moveTo(0, -12);
     ctx.lineTo(5, -2);
     ctx.lineTo(0, 4);
-    ctx.lineTo(-3, -2);
     ctx.closePath();
     ctx.fill();
+
     ctx.restore();
 
     if (this.hp < this.maxHp) {
       const w = 28;
+      const h = 3;
       const x = this.x - w / 2;
-      const y = this.y - 22;
-      ctx.fillStyle = 'rgba(0,0,0,0.5)';
-      ctx.fillRect(x, y, w, 3);
-      ctx.fillStyle = '#7dffc8';
-      ctx.fillRect(x, y, w * (this.hp / this.maxHp), 3);
+      const y = this.y - this.radius - 14;
+      ctx.fillStyle = 'rgba(0,0,0,0.55)';
+      ctx.fillRect(x, y, w, h);
+      ctx.fillStyle = '#2dffb4';
+      ctx.fillRect(x, y, w * (this.hp / this.maxHp), h);
     }
   }
 }
 
 export class CrystalPool {
   readonly items: Crystal[] = [];
+  private livingBuf: Crystal[] = [];
   private acc = 0;
 
   living(): Crystal[] {
-    return this.items.filter((c) => c.alive);
+    const buf = this.livingBuf;
+    buf.length = 0;
+    for (const c of this.items) {
+      if (c.alive) buf.push(c);
+    }
+    return buf;
   }
 
   count(): number {
@@ -146,6 +151,8 @@ export class CrystalPool {
 
   clear(): void {
     for (const c of this.items) c.alive = false;
+    this.livingBuf.length = 0;
     this.acc = 0;
   }
 }
+

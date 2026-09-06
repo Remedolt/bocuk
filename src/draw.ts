@@ -8,12 +8,10 @@ export function drawShadow(
   rx: number,
   ry: number,
 ): void {
-  ctx.save();
-  ctx.fillStyle = 'rgba(0, 0, 0, 0.38)';
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.34)';
   ctx.beginPath();
   ctx.ellipse(x, y + 6, rx, ry, 0, 0, Math.PI * 2);
   ctx.fill();
-  ctx.restore();
 }
 
 export function drawSprite(

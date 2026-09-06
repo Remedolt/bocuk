@@ -18,8 +18,8 @@ export const CAMERA = {
 
 export const WAVE = {
   duration: 45,
-  maxAlive: 72,
-  difficulty: 1.32,
+  maxAlive: 88,
+  difficulty: 1.452,
   bossEvery: 5,
 };
 

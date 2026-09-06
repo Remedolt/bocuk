@@ -365,6 +365,7 @@ export class Enemy {
 
 export class EnemyPool {
   readonly items: Enemy[] = [];
+  private livingBuf: Enemy[] = [];
 
   spawn(kind: EnemyKind, x: number, y: number, wave: number): Enemy {
     let e = this.items.find((item) => !item.alive);
@@ -377,7 +378,12 @@ export class EnemyPool {
   }
 
   living(): Enemy[] {
-    return this.items.filter((e) => e.alive);
+    const buf = this.livingBuf;
+    buf.length = 0;
+    for (const e of this.items) {
+      if (e.alive) buf.push(e);
+    }
+    return buf;
   }
 
   count(): number {
@@ -388,5 +394,6 @@ export class EnemyPool {
 
   clear(): void {
     for (const e of this.items) e.alive = false;
+    this.livingBuf.length = 0;
   }
 }

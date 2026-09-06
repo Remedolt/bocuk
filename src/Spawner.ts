@@ -25,21 +25,21 @@ export class Spawner {
   }
 
   interval(): number {
-    const hard = 0.78 / WAVE.difficulty;
-    return Math.max(0.18, hard - (this.wave - 1) * 0.06);
+    const hard = 0.72 / WAVE.difficulty;
+    return Math.max(0.14, hard - (this.wave - 1) * 0.065);
   }
 
   pickKind(): EnemyKind {
     const w = this.wave;
-    const bag: { kind: EnemyKind; n: number }[] = [{ kind: 'walker', n: 8 }];
-    if (w >= 2) bag.push({ kind: 'runner', n: 5 });
-    if (w >= 3) bag.push({ kind: 'beetle', n: 4 });
-    if (w >= 3) bag.push({ kind: 'spitter', n: 3 });
-    if (w >= 4) bag.push({ kind: 'wasp', n: 4 });
-    if (w >= 5) bag.push({ kind: 'tank', n: 3 });
+    const bag: { kind: EnemyKind; n: number }[] = [{ kind: 'walker', n: 12 }];
+    if (w >= 2) bag.push({ kind: 'runner', n: 7 });
+    if (w >= 3) bag.push({ kind: 'beetle', n: 5 });
+    if (w >= 3) bag.push({ kind: 'spitter', n: 4 });
+    if (w >= 4) bag.push({ kind: 'wasp', n: 6 });
+    if (w >= 5) bag.push({ kind: 'tank', n: 4 });
     if (w >= 8) {
-      bag.push({ kind: 'tank', n: 3 });
-      bag.push({ kind: 'wasp', n: 3 });
+      bag.push({ kind: 'tank', n: 4 });
+      bag.push({ kind: 'wasp', n: 5 });
     }
     let total = 0;
     for (const item of bag) total += item.n;
@@ -99,12 +99,15 @@ export class Spawner {
 
     this.acc += dt;
     const cap = this.isBossWave()
-      ? Math.min(WAVE.maxAlive, 8 + this.wave * 2)
-      : Math.min(WAVE.maxAlive, Math.round((10 + this.wave * 4) * WAVE.difficulty));
+      ? Math.min(WAVE.maxAlive, 12 + this.wave * 3)
+      : Math.min(WAVE.maxAlive, Math.round((13 + this.wave * 5) * WAVE.difficulty));
+    const burst = this.wave >= 3 ? 2 : 1;
     while (this.acc >= this.interval() && enemies.count() < cap) {
       this.acc -= this.interval();
-      const p = this.spawnPoint(player, camera);
-      enemies.spawn(this.pickKind(), p.x, p.y, this.wave);
+      for (let i = 0; i < burst && enemies.count() < cap; i += 1) {
+        const p = this.spawnPoint(player, camera);
+        enemies.spawn(this.pickKind(), p.x, p.y, this.wave);
+      }
     }
   }
 }
